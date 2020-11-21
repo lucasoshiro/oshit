@@ -1,4 +1,4 @@
-*
-!*.hs
-!.gitignore
-!Makefile
+*.o
+*.hi
+oshit
+tmp
