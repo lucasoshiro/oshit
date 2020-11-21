@@ -1,3 +1,4 @@
 *
 !*.hs
 !.gitignore
+!Makefile
