@@ -2,16 +2,20 @@ import Core.Core
 
 import Commands.Plumbing.Object.CreateBlob
 import Commands.Plumbing.Object.ShowObj
-import Commands.Porcelain.Init
+import Commands.Plumbing.Stage.StageBlob
 
+import Commands.Porcelain.Init
+import Commands.Porcelain.Stage.StageStatus
 
 import System.Environment
 
 
 runCmd :: String -> Command
 runCmd "init" = cmdInit
-runCmd "create-blob" = createBlob
-runCmd "show-obj" = showObj
+runCmd "create-blob" = cmdCreateBlob
+runCmd "show-obj" = cmdShowObj
+runCmd "stage-blob" = cmdStageBlob
+runCmd "stage-status" = cmdStageStatus
 runCmd _ = \_ -> fail "invalid command"
 
 main :: IO ()

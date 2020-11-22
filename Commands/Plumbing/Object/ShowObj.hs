@@ -5,8 +5,8 @@ import Core.Core
 
 import qualified Data.ByteString.Char8 as B
 
-showObj :: Command
-showObj (hash:_) = do
+cmdShowObj :: Command
+cmdShowObj (hash:_) = do
   obj <- loadObject $ B.pack hash
   B.putStr $ objectContent obj
-showObj _ = fail "hash missing"
+cmdShowObj _ = fail "hash missing"

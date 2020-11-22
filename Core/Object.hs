@@ -7,19 +7,25 @@ import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified System.Directory           as Dir
 
-data Object = Blob B.ByteString
+import Core.Core
+import Core.Stage
+
+data Object = Blob B.ByteString | Tree B.ByteString
 
 objectContent :: Object -> B.ByteString
 objectContent (Blob c) = c
+objectContent (Tree c) = c
 
 objectType :: Object -> B.ByteString
 objectType (Blob _) = B.pack "blob"
+objectType (Tree _) = B.pack "tree"
 
 objectParse :: B.ByteString -> Object
 objectParse bs = constructor objType content
   where objType = B.unpack $ (B.split ' ' bs) !! 0
         content = (B.split '\0' bs) !! 1
         constructor "blob" = Blob
+        constructor "tree" = Blob
         constructor _ = Blob
 
 objectUnparse :: Object -> B.ByteString
@@ -31,10 +37,10 @@ objectUnparse obj = B.concat $
         content = objectContent obj
         size = B.pack $ show $ B.length content
 
-hashObject :: Object -> B.ByteString
+hashObject :: Object -> Hash
 hashObject = B16.encode . SHA1.hash . objectUnparse
 
-hashString :: String -> B.ByteString
+hashString :: String -> Hash
 hashString = hashObject . Blob . B.pack
 
 compressObject :: Object -> B.ByteString
@@ -60,3 +66,4 @@ loadObject hash = B.readFile path >>= return . decompressObject
         dir = take 2 $ hashStr
         filename = drop 2 $ hashStr
         path = concat [".git/objects/", dir, "/", filename]
+
