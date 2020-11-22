@@ -1,12 +1,17 @@
 import Core.Core
 
-import Commands.Plumbing.Init
+import Commands.Plumbing.Object.CreateBlob
+import Commands.Plumbing.Object.ShowObj
+import Commands.Porcelain.Init
+
 
 import System.Environment
 
 
 runCmd :: String -> Command
 runCmd "init" = cmdInit
+runCmd "create-blob" = createBlob
+runCmd "show-obj" = showObj
 runCmd _ = \_ -> fail "invalid command"
 
 main :: IO ()

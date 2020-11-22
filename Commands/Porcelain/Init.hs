@@ -1,4 +1,4 @@
-module Commands.Plumbing.Init where
+module Commands.Porcelain.Init where
 
 import Core.Core
 import System.Directory

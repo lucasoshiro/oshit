@@ -4,5 +4,8 @@ oshit:
 
 .PHONY: clean
 clean:
-	rm -f **.o **.hi oshit
+	find . -name '*.hi' -delete
+	find . -name '*.o'  -delete
+	rm -f oshit
+
 
