@@ -1,6 +1,8 @@
 module Core.Object where
 
+import Data.List
 import Data.List.Split
+import Data.Time
 import qualified Codec.Compression.Zlib     as Zlib
 import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.ByteString.Base16     as B16
@@ -12,7 +14,7 @@ import qualified System.Directory           as Dir
 import Core.Core
 import Core.Stage
 
-data Object = Blob B.ByteString | Tree B.ByteString
+data Object = Blob B.ByteString | Tree B.ByteString | Commit B.ByteString
 
 data InnerTreeNode = InnerLeaf Hash
                    | InnerTree FilePath (Map.Map FilePath InnerTreeNode)
@@ -22,10 +24,12 @@ data HashedInnerTree = HashedInnerTree (Hash, Object, [HashedInnerTree])
 objectContent :: Object -> B.ByteString
 objectContent (Blob c) = c
 objectContent (Tree c) = c
+objectContent (Commit c) = c
 
 objectType :: Object -> B.ByteString
 objectType (Blob _) = B.pack "blob"
 objectType (Tree _) = B.pack "tree"
+objectType (Commit _) = B.pack "commit"
 
 objectParse :: B.ByteString -> Object
 objectParse bs = constructor objType content
@@ -33,6 +37,7 @@ objectParse bs = constructor objType content
         content = (B.split '\0' bs) !! 1
         constructor "blob" = Blob
         constructor "tree" = Tree
+        constructor "commit" = Tree
         constructor _ = Blob
 
 objectUnparse :: Object -> B.ByteString
@@ -137,3 +142,17 @@ hashInnerTrees (InnerTree _ nodes) = [HashedInnerTree (B.pack "", Tree $ B.pack 
 
 hashInnerTrees _ = []
   
+createCommit :: Hash       -- tree
+             -> [Hash]     -- parents
+             -> String     -- author/commiter name
+             -> String     -- author/commiter email
+             -> ZonedTime  -- timestamp
+             -> String     -- Message
+             -> Object
+createCommit tree parents name email timestamp msg = Commit . B.pack . intercalate "\n" $
+  [tree'] ++  parents' ++ [author', commiter', "", msg]
+  where tree'      = "tree" ++ " " ++ B.unpack tree
+        parents'   = ["parent" ++ " " ++ B.unpack parent | parent <- parents]
+        author'    = "author" ++ " " ++ name ++ " " ++ "<" ++ email ++ ">" ++ " " ++ timestamp'
+        commiter'  = "commiter" ++ " " ++ name ++ " " ++ "<" ++ email ++ ">" ++ " " ++ timestamp'
+        timestamp' = formatTime defaultTimeLocale "%s %z" timestamp

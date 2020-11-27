@@ -4,6 +4,7 @@ import Commands.Plumbing.Object.CreateBlob
 import Commands.Plumbing.Object.ShowObj
 import Commands.Plumbing.Stage.StageBlob
 import Commands.Plumbing.Stage.TreeFromStage
+import Commands.Plumbing.Commit.CommitFromTree
 
 import Commands.Porcelain.Init
 import Commands.Porcelain.Stage.StageStatus
@@ -18,6 +19,7 @@ runCmd "show-obj" = cmdShowObj
 runCmd "stage-blob" = cmdStageBlob
 runCmd "stage-status" = cmdStageStatus
 runCmd "tree-from-stage" = cmdTreeFromStage
+runCmd "commit-from-tree" = cmdCommitFromTree
 runCmd _ = \_ -> fail "invalid command"
 
 main :: IO ()
