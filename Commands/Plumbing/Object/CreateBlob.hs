@@ -10,4 +10,5 @@ cmdCreateBlob args = do
   let readContent = if length args > 0 then B.readFile $ args !! 0 else B.getContents
   content <- readContent
   let obj = Blob content
+  putStrLn . B.unpack $hashObject obj
   storeObject obj
