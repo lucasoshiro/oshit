@@ -1,7 +1,8 @@
 module Commands.Plumbing.Stage.TreeFromStage where
 
 import Core.Core
-import Core.Object
+import Core.Object.Object
+import Core.Object.Tree
 import Core.Stage
 
 import qualified Data.ByteString.Char8 as B

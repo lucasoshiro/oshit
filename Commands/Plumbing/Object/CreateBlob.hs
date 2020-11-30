@@ -1,7 +1,8 @@
 module Commands.Plumbing.Object.CreateBlob where
 
-import Core.Object
 import Core.Core
+import Core.Object.Blob
+import Core.Object.Object
 
 import qualified Data.ByteString.Char8 as B
 
