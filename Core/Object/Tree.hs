@@ -1,5 +1,6 @@
 module Core.Object.Tree where
 
+import Data.List
 import Data.List.Split
 import qualified Data.ByteString.Char8      as B
 import qualified Data.Map                   as Map
@@ -8,10 +9,6 @@ import qualified Data.ByteString.Base16     as B16
 import Core.Core
 import Core.Stage
 import Core.Object.Object
-
-type FileMode = String
-
-data Tree = Tree [(FileMode, FilePath, Hash)]
 
 data InnerTreeNode = InnerLeaf Hash
                    | InnerTree FilePath (Map.Map FilePath InnerTreeNode)
@@ -30,6 +27,14 @@ instance Object Tree where
      ]
     | (mode, name, hash) <- children
     ] >>= return . B.concat
+
+  objectPretty (Tree entries) = intercalate "\n" $
+    [ let objType = case filemode of "040000" -> "tree"
+                                     "100644" -> "blob"
+                                     _ -> ""
+      in intercalate " " [filemode, objType, B.unpack hash, name]
+    | (filemode, name, hash) <- entries
+    ]
 
 treesFromStage :: Stage -> [Tree]
 treesFromStage stage = trees

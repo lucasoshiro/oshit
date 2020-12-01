@@ -1,5 +1,6 @@
 module Core.Object.Object where
 
+import Data.Time
 import qualified Codec.Compression.Zlib     as Zlib
 import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.ByteString.Base16     as B16
@@ -10,11 +11,28 @@ import qualified System.Directory           as Dir
 import Core.Core
 
 type ObjectType = B.ByteString
+type FileMode = String
+
+data Tree = Tree [(FileMode, FilePath, Hash)]
+data Blob = Blob B.ByteString
+data Commit = Commit
+  { treeHash  :: Hash
+  , parents   :: [Hash]
+  , author    :: String
+  , email     :: String
+  , timestamp :: ZonedTime
+  , message   :: String
+  }
+
+data InferedObject = InferedTree Tree
+                   | InferedBlob Blob
+                   | InferedCommit Commit
 
 class Object obj where
   objectType       :: obj -> ObjectType
   objectParse      :: B.ByteString -> IO obj
   objectRawContent :: obj -> B.ByteString
+  objectPretty     :: obj -> String
 
 hashObject :: Object obj => obj -> Hash
 hashObject = B16.encode . SHA1.hash . objectFileContent
@@ -41,7 +59,7 @@ storeObject obj = do
 loadObject :: Object obj => Hash -> IO obj
 loadObject hash = loadRawObject hash >>= objectParse
 
-loadRawObject :: B.ByteString -> IO B.ByteString
+loadRawObject :: Hash -> IO B.ByteString
 loadRawObject hash = do
   let hashStr  = B.unpack hash
   let dir      = take 2 $ hashStr
@@ -56,3 +74,7 @@ objectFileContent obj = uncompressed
         size         = B.pack $ show $ B.length content
         objType      = objectType obj
         uncompressed = B.concat [objType, B.pack " ", size, B.pack "\0", content]
+
+rawObjectType :: B.ByteString -> ObjectType
+rawObjectType = B.takeWhile (/= ' ')
+
