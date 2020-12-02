@@ -18,7 +18,7 @@ data HashedInnerTree = HashedInnerTree (Hash, Tree, [HashedInnerTree])
 instance Object Tree where
   objectType _ = B.pack "tree"
 
-  objectParse _ = fail "not implemented"
+  objectParse = parseTree
 
   objectRawContent (Tree children) = B.concat $
     [[ B.pack mode, B.pack " "
@@ -32,7 +32,7 @@ instance Object Tree where
     [ let objType = case filemode of "040000" -> "tree"
                                      "100644" -> "blob"
                                      _ -> ""
-      in intercalate " " [filemode, objType, B.unpack hash, name]
+      in filemode ++ " " ++ objType ++ " " ++ B.unpack hash ++ "    " ++ name
     | (filemode, name, hash) <- entries
     ]
 
@@ -97,3 +97,20 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
 
         content = blobEntries ++ treeEntries
 treesFromInnerTrees _ = []
+
+parseTree :: B.ByteString -> IO Tree
+parseTree raw = return . Tree . getEntries $ content
+  where content = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
+
+        getEntries :: B.ByteString -> [(FileMode, FilePath, Hash)]
+        getEntries bs
+          | bs == B.empty = []
+          | otherwise     = (mode, name, hash):(getEntries rest)
+          where (mode', rest')   = B.splitAt 6 $ bs
+                (name',  rest'') = B.span (/= '\0') $ B.drop 1 rest'
+                (hash', rest)    = B.splitAt 40 $ B.drop 1 rest''
+
+                mode = B.unpack mode'
+                name = B.unpack name'
+                hash = B16.encode hash'
+        

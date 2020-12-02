@@ -24,10 +24,6 @@ data Commit = Commit
   , message   :: String
   }
 
-data InferedObject = InferedTree Tree
-                   | InferedBlob Blob
-                   | InferedCommit Commit
-
 class Object obj where
   objectType       :: obj -> ObjectType
   objectParse      :: B.ByteString -> IO obj
