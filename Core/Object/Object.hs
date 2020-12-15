@@ -51,18 +51,11 @@ storeObject obj = do
         uncompressed = objectFileContent obj
         compressed   = compress uncompressed
 
-
 loadObject :: Object obj => Hash -> IO obj
 loadObject hash = loadRawObject hash >>= objectParse
 
 loadRawObject :: Hash -> IO B.ByteString
-loadRawObject hash = do
-  let hashStr  = B.unpack hash
-  let dir      = take 2 $ hashStr
-  let filename = drop 2 $ hashStr
-  let path     = concat [".git/objects/", dir, "/", filename]
-
-  B.readFile path >>= return . decompress
+loadRawObject hash = B.readFile (hashPath hash) >>= return . decompress
 
 objectFileContent :: Object obj => obj -> B.ByteString
 objectFileContent obj = uncompressed
@@ -74,3 +67,14 @@ objectFileContent obj = uncompressed
 rawObjectType :: B.ByteString -> ObjectType
 rawObjectType = B.takeWhile (/= ' ')
 
+hashPath :: Hash -> FilePath
+hashPath hash = path
+  where hashStr  = B.unpack hash
+        dir      = take 2 $ hashStr
+        filename = drop 2 $ hashStr
+        path     = concat [".git/objects/", dir, "/", filename]
+
+objectExists :: String -> IO Bool
+objectExists hashStr = do
+  let path = ".git/objects/" ++ take 2 hashStr ++ "/" ++ drop 2 hashStr
+  Dir.doesFileExist path
