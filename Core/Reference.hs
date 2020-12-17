@@ -1,13 +1,18 @@
 module Core.Reference where
 
 import Core.Core
+import Util.Util
 
 import qualified Data.ByteString.Char8 as B
+import System.Directory
 
 type Branch = String
 
+branchDir :: FilePath
+branchDir = ".git/refs/heads/"
+
 branchPath :: Branch -> FilePath
-branchPath branch = ".git/refs/heads/" ++ branch
+branchPath branch = branchDir ++ branch
 
 headPath :: FilePath
 headPath = ".git/HEAD"
@@ -27,3 +32,12 @@ setBranchToHead branch = writeFile ".git/HEAD" $ "ref: " ++
 
 setCommitToHead :: Hash -> IO ()
 setCommitToHead hash = writeFile ".git/HEAD" $ B.unpack hash
+
+allBranches :: IO [(Branch, Hash)]
+allBranches = do
+  branches <- listDirectory branchDir
+  sequence [ do
+               hash <- readFile $ branchPath branch
+               return (branch, B.pack . trim $ hash)
+           | branch <- branches
+           ]
