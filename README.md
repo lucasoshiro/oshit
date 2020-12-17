@@ -26,3 +26,6 @@ Just run `make` in the root.
 - `show-obj`: similar to `git cat-file -p`
 - `stage-blob`: similar to `git update-info --add --cacheinfo 100644`
 - `tree-from-stage`: similar to `git write-tree`
+- `update-branch`: similar to `git update-ref`, but only for branches
+- `update-head`: similar to `git update-ref HEAD`
+- `log`: similar to `git log` (note: you **must** provide a hash!)
