@@ -27,4 +27,3 @@ setBranchToHead branch = writeFile ".git/HEAD" $ "ref: " ++
 
 setCommitToHead :: Hash -> IO ()
 setCommitToHead hash = writeFile ".git/HEAD" $ B.unpack hash
-

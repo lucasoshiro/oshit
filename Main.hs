@@ -9,6 +9,7 @@ import Commands.Plumbing.Reference.UpdateHead
 import Commands.Plumbing.Commit.CommitFromTree
 
 import Commands.Porcelain.Init
+import Commands.Porcelain.Log
 import Commands.Porcelain.Stage.StageStatus
 
 import System.Environment
@@ -24,6 +25,7 @@ runCmd "tree-from-stage"  = cmdTreeFromStage
 runCmd "commit-from-tree" = cmdCommitFromTree
 runCmd "update-branch"    = cmdUpdateBranch
 runCmd "update-head"      = cmdUpdateHead
+runCmd "log"              = cmdLog
 runCmd _ = \_ -> fail "invalid command"
 
 main :: IO ()

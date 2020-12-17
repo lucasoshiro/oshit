@@ -45,7 +45,7 @@ instance Object Commit where
                        authorLine
           timestamp  = fromJust timestamp'
           message    = B.unpack $
-                       B.drop (4 + (sum $ map B.length headerLines)) $
+                       B.drop (1 + length headerLines + (sum $ map B.length headerLines)) $
                        content
           commit = Commit tree parents author email timestamp message
 
@@ -59,3 +59,4 @@ instance Object Commit where
           timestamp' = formatTime defaultTimeLocale gitTimeFormat timestamp
 
   objectPretty = B.unpack . objectRawContent
+
