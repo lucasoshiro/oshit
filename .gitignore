@@ -1,4 +1,6 @@
 *.o
 *.hi
+Debug.hs
 oshit
+oshit-debug
 tmp
