@@ -4,9 +4,14 @@ module Core.Index where
 
 import Util.Util
 
-import qualified Data.ByteString.Char8  as B
-import qualified Data.ByteString.Base16 as B16
+import qualified Crypto.Hash.SHA1           as SHA1
+import qualified Data.Binary                as Bin
+import qualified Data.ByteString.Char8      as B
+import qualified Data.ByteString.Base16     as B16
+import qualified Data.ByteString.Lazy.Char8 as L
 
+import Data.Char
+import Data.Int
 import Data.List
 
 data IndexEntry = IndexEntry
@@ -112,3 +117,20 @@ prettyIndex index = intercalate "\n" $ map (B.unpack . prettyEntry) index
 
 showIndex :: Index -> IO ()
 showIndex index = putStrLn . prettyIndex $ index
+
+unparseIndexEntry :: IndexEntry -> B.ByteString
+unparseIndexEntry (IndexEntry c m d i mode u g size hash flags path) =
+  B.concat [c, m, d, i, mode, u, g, size, hash, flags, path]
+
+unparseIndex :: Index -> B.ByteString
+unparseIndex index = content `B.append` hash
+  where header = B.concat [dirc, version, size]
+        dirc = B.pack "DIRC"
+        version = B.pack . map chr $ [0, 0, 0, 2]
+        size = L.toStrict . Bin.encode $ (fromIntegral . length $ index :: Int32)
+        body = B.concat . map unparseIndexEntry $ index
+        content = header `B.append` body
+        hash = SHA1.hash $ content
+
+storeIndex :: Index -> IO ()
+storeIndex = B.writeFile indexPath . unparseIndex
