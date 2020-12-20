@@ -7,6 +7,7 @@ import qualified Data.Map                   as Map
 import qualified Data.ByteString.Base16     as B16
 
 import Core.Core
+import Core.Index
 import Core.Stage
 import Core.Object.Object
 
@@ -49,7 +50,21 @@ treesFromStage stage = trees
         filesystem = foldl insertToInnerTree (InnerTree "" Map.empty) files
 
         trees = treesFromInnerTrees filesystem
-        
+
+treesFromIndex :: Index -> [Tree]
+treesFromIndex index = trees
+  where splittedIndex = [ (B16.encode hash, splitOn "/" . B.unpack $ path)
+                        | (IndexEntry {hash = hash, path = path}) <- index
+                        ]
+        files = [ (hash, init path, last path)
+                | (hash, path) <- splittedIndex
+                ]
+
+        filesystem = foldl insertToInnerTree (InnerTree "" Map.empty) files
+
+        trees = treesFromInnerTrees filesystem
+
+
 insertToInnerTree :: InnerTreeNode
                   -> (Hash, [FilePath], FilePath)
                   -> InnerTreeNode
@@ -77,7 +92,7 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
                           ("100644", name, (fst . B16.decode $ hash))
                           ]
 
-        descendentTrees' :: [(FilePath, [Tree])] 
+        descendentTrees' :: [(FilePath, [Tree])]
         descendentTrees' = [ (name, [c | c <- treesFromInnerTrees child])
                            | (name, child) <- nodeList]
 
@@ -113,4 +128,3 @@ parseTree raw = return . Tree . getEntries $ content
                 mode = B.unpack mode'
                 name = B.unpack name'
                 hash = B16.encode hash'
-        

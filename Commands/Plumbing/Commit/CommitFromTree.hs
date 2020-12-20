@@ -7,7 +7,6 @@ import Data.Time
 
 import qualified Data.ByteString.Char8 as B
 
-
 cmdCommitFromTree :: Command
 cmdCommitFromTree (author:email:tree:parents) = do
   now <- getZonedTime

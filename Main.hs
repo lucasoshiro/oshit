@@ -2,6 +2,7 @@ import Core.Core
 
 import Commands.Plumbing.Commit.CommitFromTree
 import Commands.Plumbing.Index.ListIndex
+import Commands.Plumbing.Index.TreeFromIndex
 import Commands.Plumbing.Object.CreateBlob
 import Commands.Plumbing.Object.ShowObj
 import Commands.Plumbing.Reference.UpdateBranch
@@ -25,6 +26,7 @@ runCmd "list-index"       = cmdListIndex
 runCmd "show-obj"         = cmdShowObj
 runCmd "stage-blob"       = cmdStageBlob
 runCmd "stage-status"     = cmdStageStatus
+runCmd "tree-from-index"  = cmdTreeFromIndex
 runCmd "tree-from-stage"  = cmdTreeFromStage
 runCmd "update-branch"    = cmdUpdateBranch
 runCmd "update-head"      = cmdUpdateHead
