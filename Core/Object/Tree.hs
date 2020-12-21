@@ -54,7 +54,7 @@ treesFromStage stage = trees
 treesFromIndex :: Index -> [Tree]
 treesFromIndex index = trees
   where splittedIndex = [ (B16.encode hash, splitOn "/" . B.unpack $ path)
-                        | (IndexEntry {hash = hash, path = path}) <- index
+                        | (path, (IndexEntry {hash = hash})) <- Map.toList index
                         ]
         files = [ (hash, init path, last path)
                 | (hash, path) <- splittedIndex

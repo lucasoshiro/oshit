@@ -6,6 +6,7 @@ import Util.Util
 
 import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.Binary                as Bin
+import qualified Data.Map                   as Map
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Lazy.Char8 as L
@@ -25,28 +26,29 @@ data IndexEntry = IndexEntry
   , size  :: B.ByteString
   , hash  :: B.ByteString
   , flags :: B.ByteString
-  , path  :: B.ByteString
   }
 
-type Index = [IndexEntry]
+type Index = Map.Map B.ByteString IndexEntry
 
 indexPath :: FilePath
 indexPath = ".git/index"
 
-parseIndexEntry :: B.ByteString -> IndexEntry
-parseIndexEntry raw = IndexEntry
-  { ctime = sliced !! 0
-  , mtime = sliced !! 1
-  , dev   = sliced !! 2
-  , ino   = sliced !! 3
-  , mode  = sliced !! 4
-  , uid   = sliced !! 5
-  , gid   = sliced !! 6
-  , size  = sliced !! 7
-  , hash  = sliced !! 8
-  , flags = sliced !! 9
-  , path  = B.takeWhile (/= '\0') $ sliced !! 10
-  }
+parseIndexEntry :: B.ByteString -> (B.ByteString, IndexEntry)
+parseIndexEntry raw =
+  ( B.takeWhile (/= '\0') $ sliced !! 10
+  , IndexEntry
+    { ctime = sliced !! 0
+    , mtime = sliced !! 1
+    , dev   = sliced !! 2
+    , ino   = sliced !! 3
+    , mode  = sliced !! 4
+    , uid   = sliced !! 5
+    , gid   = sliced !! 6
+    , size  = sliced !! 7
+    , hash  = sliced !! 8
+    , flags = sliced !! 9
+    }
+  )
   where slices =
           [ 8  -- ctime
           , 8  -- mtime
@@ -77,10 +79,14 @@ splitRawEntries bs = if B.length bs ==  0
         rest = B.drop (B.length next) bs
 
 parseIndex :: B.ByteString -> Index
-parseIndex index = map parseIndexEntry $
+parseIndex index =
+  Map.fromList .
+  map parseIndexEntry .
+
   -- drop extensions
   takeWhile (not . (`elem` [B.pack "TREE", B.pack "REUC"]) . B.take 4) .
   splitRawEntries .
+
   -- drop header and sha-1
   B.reverse .
   (B.drop 40) .
@@ -102,24 +108,30 @@ readIndex :: IO Index
 readIndex = B.readFile indexPath >>= return . parseIndex
 
 prettyIndex :: Index -> String
-prettyIndex index = intercalate "\n" $ map (B.unpack . prettyEntry) index
-  where prettyEntry :: IndexEntry -> B.ByteString
-        prettyEntry (IndexEntry
-                     { path = path
-                     , hash = hash
+prettyIndex index = intercalate "\n" .
+                    map (B.unpack . prettyEntry) .
+                    sortByPath .
+                    Map.toList $
+                    index
+  where prettyEntry :: (B.ByteString, IndexEntry) -> B.ByteString
+        prettyEntry ( path
+                    , (IndexEntry
+                     { hash = hash
                      , mode = mode
-                     }) = B.concat $
+                     })) = B.concat $
                           [(B16.encode mode)
                           , B.pack " "
                           , (B16.encode hash)
                           , B.pack " "
-                          , path]
+                          , path
+                          ]
+        sortByPath = sortBy (\a b -> compare (fst a) (fst b))
 
 showIndex :: Index -> IO ()
 showIndex index = putStrLn . prettyIndex $ index
 
-unparseIndexEntry :: IndexEntry -> B.ByteString
-unparseIndexEntry (IndexEntry c m d i mode u g size hash flags path) =
+unparseIndexEntry :: (B.ByteString, IndexEntry) -> B.ByteString
+unparseIndexEntry (path, (IndexEntry c m d i mode u g size hash flags)) =
   B.concat [c, m, d, i, mode, u, g, size, hash, flags, path]
 
 unparseIndex :: Index -> B.ByteString
@@ -128,7 +140,7 @@ unparseIndex index = content `B.append` hash
         dirc = B.pack "DIRC"
         version = B.pack . map chr $ [0, 0, 0, 2]
         size = L.toStrict . Bin.encode $ (fromIntegral . length $ index :: Int32)
-        body = B.concat . map unparseIndexEntry $ index
+        body = B.concat . map unparseIndexEntry . Map.toList $ index
         content = header `B.append` body
         hash = SHA1.hash $ content
 
