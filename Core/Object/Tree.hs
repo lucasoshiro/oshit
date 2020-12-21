@@ -8,7 +8,6 @@ import qualified Data.ByteString.Base16     as B16
 
 import Core.Core
 import Core.Index
-import Core.Stage
 import Core.Object.Object
 
 data InnerTreeNode = InnerLeaf Hash
@@ -36,20 +35,6 @@ instance Object Tree where
       in filemode ++ " " ++ objType ++ " " ++ B.unpack hash ++ "    " ++ name
     | (filemode, name, hash) <- entries
     ]
-
-treesFromStage :: Stage -> [Tree]
-treesFromStage stage = trees
-  where splittedStage = [ (hash, splitOn "/" path)
-                        | (hash, path) <- stage
-                        ]
-
-        files = [ (hash, init path, last path)
-                | (hash, path) <- splittedStage
-                ]
-
-        filesystem = foldl insertToInnerTree (InnerTree "" Map.empty) files
-
-        trees = treesFromInnerTrees filesystem
 
 treesFromIndex :: Index -> [Tree]
 treesFromIndex index = trees
