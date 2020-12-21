@@ -1,6 +1,7 @@
 import Core.Core
 
 import Commands.Plumbing.Commit.CommitFromTree
+import Commands.Plumbing.Index.AddBlob
 import Commands.Plumbing.Index.ListIndex
 import Commands.Plumbing.Index.TreeFromIndex
 import Commands.Plumbing.Object.CreateBlob
@@ -18,6 +19,7 @@ import System.Environment
 
 
 runCmd :: String -> Command
+runCmd "add-blob"         = cmdAddBlob
 runCmd "commit-from-tree" = cmdCommitFromTree
 runCmd "create-blob"      = cmdCreateBlob
 runCmd "init"             = cmdInit

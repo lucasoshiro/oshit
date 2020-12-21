@@ -2,6 +2,7 @@ module Core.Index where
 
 -- Note: this index parser assumes index version 2
 
+import Core.Core
 import Util.Util
 
 import qualified Crypto.Hash.SHA1           as SHA1
@@ -30,8 +31,29 @@ data IndexEntry = IndexEntry
 
 type Index = Map.Map B.ByteString IndexEntry
 
+indexEntryStructure =
+  [ 8  -- ctime
+  , 8  -- mtime
+  , 4  -- dev
+  , 4  -- ino
+  , 4  -- mode
+  , 4  -- uid
+  , 4  -- gid
+  , 4  -- size
+  , 20 -- hash
+  , 2  -- flags
+  ]
+
 indexPath :: FilePath
 indexPath = ".git/index"
+
+emptyIndexEntry :: IndexEntry
+emptyIndexEntry = snd .
+                  parseIndexEntry .
+                  B.pack .
+                  take (sum indexEntryStructure) .
+                  repeat $
+                  '\0'
 
 parseIndexEntry :: B.ByteString -> (B.ByteString, IndexEntry)
 parseIndexEntry raw =
@@ -49,19 +71,7 @@ parseIndexEntry raw =
     , flags = sliced !! 9
     }
   )
-  where slices =
-          [ 8  -- ctime
-          , 8  -- mtime
-          , 4  -- dev
-          , 4  -- ino
-          , 4  -- mode
-          , 4  -- uid
-          , 4  -- gid
-          , 4  -- size
-          , 20 -- hash
-          , 2  -- flags
-          ]
-        sliced = sliceByteString slices raw
+  where sliced = sliceByteString indexEntryStructure raw
 
 splitRawEntries :: B.ByteString -> [B.ByteString]
 splitRawEntries bs = if B.length bs ==  0
@@ -132,7 +142,10 @@ showIndex index = putStrLn . prettyIndex $ index
 
 unparseIndexEntry :: (B.ByteString, IndexEntry) -> B.ByteString
 unparseIndexEntry (path, (IndexEntry c m d i mode u g size hash flags)) =
-  B.concat [c, m, d, i, mode, u, g, size, hash, flags, path]
+  content `B.append` trailing
+  where content = B.concat [c, m, d, i, mode, u, g, size, hash, flags, path, B.pack "\0"]
+        padding = (8 - (B.length content `mod` 8)) `mod` 8
+        trailing = B.pack . take padding . repeat $ '\0'
 
 unparseIndex :: Index -> B.ByteString
 unparseIndex index = content `B.append` hash
@@ -146,3 +159,16 @@ unparseIndex index = content `B.append` hash
 
 storeIndex :: Index -> IO ()
 storeIndex = B.writeFile indexPath . unparseIndex
+
+addBlobToIndex :: FilePath -> Hash -> Index -> Index
+addBlobToIndex path hash' index = Map.insert (B.pack path) entry index
+  where entry = emptyIndexEntry {hash = hash, flags = flags, mode = mode}
+        pathSize = length path
+        flags' :: Int16
+        flags' = if pathSize <= 0x0FFF
+                 then fromIntegral pathSize
+                 else 0x0FFF
+        flags = L.toStrict . Bin.encode $ flags'
+        hash = fst . B16.decode $ hash'
+        mode' = 100644 :: Int32
+        mode = L.toStrict . Bin.encode $ mode'
