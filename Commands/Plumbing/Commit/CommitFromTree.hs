@@ -3,6 +3,7 @@ module Commands.Plumbing.Commit.CommitFromTree where
 import Core.Core
 import Core.Object.Object
 import Core.Object.Commit
+
 import Data.Time
 
 import qualified Data.ByteString.Char8 as B

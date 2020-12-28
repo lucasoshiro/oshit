@@ -4,6 +4,9 @@ import Core.Core
 import Util.Util
 
 import qualified Data.ByteString.Char8 as B
+
+import Data.List
+import Data.List.Split
 import System.Directory
 
 type Branch = String
@@ -17,11 +20,29 @@ branchPath branch = branchDir ++ branch
 headPath :: FilePath
 headPath = ".git/HEAD"
 
+getHead :: IO (Either Branch Hash)
+getHead = do
+  content <- readFile headPath >>= return . trim
+  return $
+    if "ref" `isPrefixOf` content
+    then Left . last $ (splitOn "/" content)
+    else Right . B.pack $ content
+  
+getHeadCommitHash :: IO Hash
+getHeadCommitHash = do
+  content <- getHead
+  case content of
+    Right hash -> return hash
+    Left branch -> getBranchCommitHash branch
+
+getBranchCommitHash :: Branch -> IO Hash
+getBranchCommitHash branch = (readFile . branchPath $ branch) >>=
+                             return . B.pack . trim
+
 updateHead :: Either Branch Hash -> IO ()
 updateHead (Left branch) = writeFile headPath $
   "ref: " ++ "refs/heads/" ++ branch ++ "\n"
 updateHead (Right hash) = writeFile headPath $ B.unpack hash ++ "\n"
-
 
 updateBranch :: Branch -> Hash -> IO ()
 updateBranch branch hash = writeFile (branchPath branch) $ B.unpack hash

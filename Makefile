@@ -1,6 +1,6 @@
 .PHONY: oshit
 oshit:
-	ghc -dynamic Main.hs -o oshit
+	ghc -dynamic -O2 Main.hs -o oshit
 
 debug:
 	ghc -dynamic Debug.hs -o oshit-debug
