@@ -31,6 +31,7 @@ data IndexEntry = IndexEntry
 
 type Index = Map.Map B.ByteString IndexEntry
 
+indexEntryStructure :: [Int]
 indexEntryStructure =
   [ 8  -- ctime
   , 8  -- mtime
@@ -54,6 +55,12 @@ emptyIndexEntry = snd .
                   take (sum indexEntryStructure) .
                   repeat $
                   '\0'
+
+parseIndexEntries :: Int -> [B.ByteString] -> [(B.ByteString, IndexEntry)]
+parseIndexEntries 0 _ = []
+parseIndexEntries _ [] = []
+parseIndexEntries n (raw:rest) = parseIndexEntry raw :
+                                 (parseIndexEntries (n - 1) rest)
 
 parseIndexEntry :: B.ByteString -> (B.ByteString, IndexEntry)
 parseIndexEntry raw =
@@ -91,18 +98,11 @@ splitRawEntries bs = if B.length bs ==  0
 parseIndex :: B.ByteString -> Index
 parseIndex index =
   Map.fromList .
-  map parseIndexEntry .
-
-  -- drop extensions
-  takeWhile (not . (`elem` [B.pack "TREE", B.pack "REUC"]) . B.take 4) .
+  parseIndexEntries (fromIntegral size) .
   splitRawEntries .
-
-  -- drop header and sha-1
-  B.reverse .
-  (B.drop 40) .
-  B.reverse .
-  (B.drop 12) $
+  (B.drop 12) $  -- skip header
   index
+  where size = Bin.decode . L.fromStrict . B.take 4 . B.drop 8 $ index :: Int32
 
 dumpIndex :: B.ByteString -> IO ()
 dumpIndex index = putStrLn . intercalate "\n" . map (B.unpack . B16.encode) $
