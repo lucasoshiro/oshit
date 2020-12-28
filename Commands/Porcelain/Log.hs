@@ -26,7 +26,9 @@ cmdLog (hash:_) = do
 
   putStrLn . intercalate "\n" $ prettyCommits
 
-cmdLog [] = fail "commit not provided"
+cmdLog [] = do
+  hash <- getHeadCommitHash >>= return . B.unpack
+  cmdLog [hash]
   
 prettyCommit :: Map.Map Hash [Branch] -> Hash -> Commit -> String
 prettyCommit branchMap hash (Commit _ _ author email timestamp message) =
