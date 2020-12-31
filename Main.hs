@@ -12,12 +12,14 @@ import Commands.Plumbing.Reference.UpdateHead
 import Commands.Porcelain.Commit.Commit
 import Commands.Porcelain.Init
 import Commands.Porcelain.Log
+import Commands.Porcelain.Reference.Branch
 
 import System.Environment
 
 
 runCmd :: String -> Command
 runCmd "add-blob"         = cmdAddBlob
+runCmd "branch"           = cmdBranch
 runCmd "commit-from-tree" = cmdCommitFromTree
 runCmd "create-blob"      = cmdCreateBlob
 runCmd "commit"           = cmdCommit
