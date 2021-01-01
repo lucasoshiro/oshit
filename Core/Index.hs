@@ -3,6 +3,8 @@ module Core.Index where
 -- Note: this index parser assumes index version 2
 
 import Core.Core
+import Core.Object.Object
+import Core.Object.Blob ()
 import Util.Util
 
 import qualified Crypto.Hash.SHA1           as SHA1
@@ -15,6 +17,9 @@ import qualified Data.ByteString.Lazy.Char8 as L
 import Data.Char
 import Data.Int
 import Data.List
+import Foreign.C.Types
+import System.PosixCompat.Files
+import System.PosixCompat.Types
 
 data IndexEntry = IndexEntry
   { ctime :: B.ByteString
@@ -172,3 +177,41 @@ addBlobToIndex path hash' index = Map.insert (B.pack path) entry index
         hash = fst . B16.decode $ hash'
         mode' = 100644 :: Int32
         mode = L.toStrict . Bin.encode $ mode'
+
+addFileToIndex :: FilePath -> Index -> IO Index
+addFileToIndex path index = do
+  status <- getFileStatus path
+  content <- B.readFile path
+  let blob = Blob content
+  let hash = hashObject blob
+  let pathSize = length path
+  let flags' = (if pathSize <= 0x0FFF
+                then fromIntegral pathSize
+                else 0x0FFF) :: Int16
+  let flags = L.toStrict . Bin.encode $ flags'
+
+  let entry = IndexEntry
+        { ctime = (\(CTime c) -> toBS64 c) $ statusChangeTime status
+        , mtime = (\(CTime c) -> toBS64 c) $ modificationTime status
+        , dev   = (\(CDev  c) -> toBS32 c) $ deviceID         status
+        , ino   = (\(CIno  c) -> toBS32 c) $ fileID           status
+        , mode  = (\(CMode c) -> toBS32 c) $ fileMode         status
+        , uid   = (\(CUid  c) -> toBS32 c) $ fileOwner        status
+        , gid   = (\(CGid  c) -> toBS32 c) $ fileGroup        status
+        , size  = (\(COff  c) -> toBS32 c) $ fileSize         status
+        , hash  = fst . B16.decode $ hash
+        , flags = flags
+        }
+
+  (objectExists . B.unpack $ hash) >>= \e ->
+    if e
+    then return ()
+    else storeObject blob
+
+  return $ Map.insert (B.pack path) entry index
+
+updateAndStoreIndex :: Index -> [FilePath] -> IO ()
+updateAndStoreIndex index files = do
+  let adds = map addFileToIndex files
+  newIndex <- foldl (>>=) (return index) adds
+  storeIndex newIndex
