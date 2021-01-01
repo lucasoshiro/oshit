@@ -26,10 +26,11 @@ cmdCommit _ = do
   now    <- getZonedTime
 
   -- Edit commit message
+  writeFile msgPath ""
   callProcess editor [msgPath]
   msg <- readFile msgPath
   removeFile msgPath
-  if msg == "" then fail "" else return ()
+  if msg == "" then fail "Message not provided. Aborting" else return ()
 
   -- Generate and store tree and subtrees
   index <- readIndex
