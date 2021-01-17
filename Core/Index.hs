@@ -15,6 +15,7 @@ import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Lazy.Char8 as L
 
 import Data.Char
+import Data.Either
 import Data.Int
 import Data.List
 import Foreign.C.Types
@@ -174,7 +175,7 @@ addBlobToIndex path hash' index = Map.insert (B.pack path) entry index
                  then fromIntegral pathSize
                  else 0x0FFF
         flags = L.toStrict . Bin.encode $ flags'
-        hash = fst . B16.decode $ hash'
+        hash = fromRight B.empty . B16.decode $ hash'
         mode' = 100644 :: Int32
         mode = L.toStrict . Bin.encode $ mode'
 
@@ -199,7 +200,7 @@ addFileToIndex path index = do
         , uid   = (\(CUid  c) -> toBS32 c) $ fileOwner        status
         , gid   = (\(CGid  c) -> toBS32 c) $ fileGroup        status
         , size  = (\(COff  c) -> toBS32 c) $ fileSize         status
-        , hash  = fst . B16.decode $ hash
+        , hash  = fromRight B.empty . B16.decode $ hash
         , flags = flags
         }
 

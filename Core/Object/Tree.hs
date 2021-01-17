@@ -1,5 +1,6 @@
 module Core.Object.Tree where
 
+import Data.Either
 import Data.List
 import Data.List.Split
 import qualified Data.ByteString.Char8      as B
@@ -74,7 +75,7 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
           (name, child) <- nodeList
           case child of (InnerTree _ _) -> []
                         (InnerLeaf hash) -> [
-                          ("100644", name, (fst . B16.decode $ hash))
+                          ("100644", name, (fromRight B.empty . B16.decode $ hash))
                           ]
 
         descendentTrees' :: [(FilePath, [Tree])]
@@ -93,7 +94,7 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
         treeEntries :: [(FileMode, FilePath, Hash)]
         treeEntries = do
           (name, tree) <- childTrees
-          [ ("040000", name, (fst . B16.decode . hashObject $ tree)) ]
+          [ ("040000", name, (fromRight B.empty . B16.decode . hashObject $ tree)) ]
 
         content = blobEntries ++ treeEntries
 treesFromInnerTrees _ = []
