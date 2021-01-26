@@ -13,6 +13,7 @@ import qualified Data.Map                   as Map
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified System.Directory           as Dir
 
 import Data.Char
 import Data.Either
@@ -121,7 +122,9 @@ dumpIndex index = putStrLn . intercalate "\n" . map (B.unpack . B16.encode) $
                      index
 
 readIndex :: IO Index
-readIndex = B.readFile indexPath >>= return . parseIndex
+readIndex = Dir.doesFileExist indexPath >>= \p -> if p
+  then B.readFile indexPath >>= return . parseIndex
+  else return Map.empty
 
 prettyIndex :: Index -> String
 prettyIndex index = intercalate "\n" .
