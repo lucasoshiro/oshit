@@ -51,6 +51,7 @@ docker run -v "[oshit path]:/oshit" -e OSHIT\_AUTHOR=[author] -e OSHIT\_EMAIL=[e
 - `log`: similar to `git log`. You can provide a hash, or call without parameters.
 - `commit`: similar to `git commit`. It will call the default text editor for the commit message
 - `add`: similar to `git add`. You **must** provide a file!
+- `branch`: similar to `git branch`. Without arguments, show branches. With an argument, create a branch
 
 ### Plumbing
 
