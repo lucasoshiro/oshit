@@ -21,11 +21,19 @@ Just run `make` in the root.
 
 ## Commands (so far)
 
-- `commit-from-tree`: similiar to `git commit-tree`
-- `create-blob`: similar to `git hash-object -w --stdin`
-- `show-obj`: similar to `git cat-file -p`
-- `stage-blob`: similar to `git update-info --add --cacheinfo 100644`
-- `tree-from-stage`: similar to `git write-tree`
-- `update-branch`: similar to `git update-ref`, but only for branches
+### Porcelain commands
+
+- `log`: similar to `git log`. You can provide a hash, or call without parameters.
+- `commit`: similar to `git commit`. It will call the default text editor for the commit message
+- `add`: similar to `git add`. You **must** provide a file!
+
+### Plumbing
+
+- `commit-from-tree`: similiar to `git commit-tree`. Creates a commit for a tree.
+- `create-blob`: similar to `git hash-object -w --stdin`. Creates a blob object.
+- `show-obj`: similar to `git cat-file -p`. Show object contents
+- `add-blob`: similar to `git update-info --add --cacheinfo 100644`. Adds a blob to the index. A hash and a filename **must** be provided.
+- `tree-from-index`: similar to `git write-tree`. Creates a tree based on the index contents.
+- `update-branch`: similar to `git update-ref`, but only for branches.
 - `update-head`: similar to `git update-ref HEAD`
-- `log`: similar to `git log` (note: you **must** provide a hash!)
+
