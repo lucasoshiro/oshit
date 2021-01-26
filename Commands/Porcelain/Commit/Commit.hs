@@ -4,8 +4,7 @@ import Commands.Plumbing.Commit.CommitFromTree
 
 import Core.Core
 import Core.Index
-import Core.Object.Object
-import Core.Object.Tree
+import Core.Object
 import Core.Reference
 
 import qualified Data.ByteString.Char8 as B

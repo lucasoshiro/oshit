@@ -2,7 +2,7 @@ module Commands.Porcelain.Log where
 
 import Core.Core
 import Core.Log
-import Core.Object.Object
+import Core.Object
 import Core.Reference
 import Util.Colors
 import Util.Util

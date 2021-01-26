@@ -1,8 +1,7 @@
 module Core.Log where
 
 import Core.Core
-import Core.Object.Object
-import Core.Object.Commit ()
+import Core.Object
 
 import Data.Set as Set
 

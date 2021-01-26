@@ -1,8 +1,7 @@
 module Commands.Plumbing.Commit.CommitFromTree where
 
 import Core.Core
-import Core.Object.Object
-import Core.Object.Commit
+import Core.Object
 
 import Data.Time
 

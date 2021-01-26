@@ -3,9 +3,17 @@ module Core.Index where
 -- Note: this index parser assumes index version 2
 
 import Core.Core
-import Core.Object.Object
-import Core.Object.Blob ()
+import Core.Object
 import Util.Util
+
+import Data.Char
+import Data.Either
+import Data.Int
+import Data.List
+import Data.List.Split
+import Foreign.C.Types
+import System.PosixCompat.Files
+import System.PosixCompat.Types
 
 import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.Binary                as Bin
@@ -16,13 +24,6 @@ import qualified Data.Map                   as Map
 import qualified Data.Set                   as Set
 import qualified System.Directory           as Dir
 
-import Data.Char
-import Data.Either
-import Data.Int
-import Data.List
-import Foreign.C.Types
-import System.PosixCompat.Files
-import System.PosixCompat.Types
 
 data IndexEntry = IndexEntry
   { ctime :: B.ByteString
@@ -269,3 +270,18 @@ indexStatus = do
         ) >>= return . (>>= id)
        
   return (modified, sort . Set.toList $ deleted, sort . Set.toList $ untracked)
+
+treesFromIndex :: Index -> [Tree]
+treesFromIndex index = trees
+  where splittedIndex = [ (B16.encode hash, splitOn "/" . B.unpack $ path)
+                        | (path, (IndexEntry {hash = hash})) <- Map.toList index
+                        ]
+        files = [ (hash, init path, last path)
+                | (hash, path) <- splittedIndex
+                ]
+
+        filesystem = foldl insertToInnerTree (InnerTree "" Map.empty) files
+
+        trees = treesFromInnerTrees filesystem
+
+

@@ -3,8 +3,8 @@ module Commands.Plumbing.Reference.UpdateHead where
 import qualified Data.ByteString.Char8      as B
 
 import Core.Core
-import Core.Object.Object
 import Core.Reference
+import Core.Object
 
 cmdUpdateHead :: Command
 cmdUpdateHead (ref:_) = do

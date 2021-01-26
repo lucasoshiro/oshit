@@ -1,8 +1,7 @@
 module Commands.Plumbing.Object.ListTree where
 
 import Core.Core
-import Core.Object.Object
-import Core.Object.Tree
+import Core.Object
 
 import qualified Data.ByteString.Char8 as B
 
