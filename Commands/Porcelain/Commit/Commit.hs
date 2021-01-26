@@ -43,10 +43,13 @@ cmdCommit _ = do
   head <- getHead
   if isLeft head then return () else fail "HEAD detached"
   let branch = fromLeft "" head
-  parent <- getBranchCommitHash branch
+  branchExists' <- branchExists branch
+  parents <- if branchExists'
+    then getBranchCommitHash branch >>= \parent -> return [parent]
+    else return []
 
   -- Store commit
-  let commit = Commit tree [parent] author email now msg
+  let commit = Commit tree parents author email now msg
   let hash = hashObject commit
   sequence_ [storeObject commit, putStrLn $ B.unpack hash]
 

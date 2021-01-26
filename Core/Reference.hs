@@ -4,10 +4,10 @@ import Core.Core
 import Util.Util
 
 import qualified Data.ByteString.Char8 as B
+import qualified System.Directory      as Dir
 
 import Data.List
 import Data.List.Split
-import System.Directory
 
 type Branch = String
 
@@ -16,6 +16,9 @@ branchDir = ".git/refs/heads/"
 
 branchPath :: Branch -> FilePath
 branchPath branch = branchDir ++ branch
+
+branchExists :: Branch -> IO Bool
+branchExists = Dir.doesFileExist . branchPath
 
 headPath :: FilePath
 headPath = ".git/HEAD"
@@ -56,7 +59,7 @@ setCommitToHead hash = writeFile ".git/HEAD" $ B.unpack hash
 
 allBranches :: IO [(Branch, Hash)]
 allBranches = do
-  branches <- listDirectory branchDir
+  branches <- Dir.listDirectory branchDir
   sequence [ do
                hash <- readFile $ branchPath branch
                return (branch, B.pack . trim $ hash)
