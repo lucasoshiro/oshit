@@ -41,7 +41,7 @@ docker build -t oshit .
 for build the `oshit` Docker image. For executing it, run:
 
 ~~~bash
-docker run -v "[oshit path]:/oshit" -e OSHIT\_AUTHOR=[author] -e OSHIT\_EMAIL=[email] -it oshit
+docker run -v "[oshit path]:/oshit" -e OSHIT_AUTHOR=[author] -e OSHIT_EMAIL=[email] -it oshit
 ~~~ 
 
 ## Commands (so far)
