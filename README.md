@@ -8,7 +8,16 @@ how hard it is.
 
 ## Dependencies
 
-__TODO: I don't remember them...__
+- `ghc`
+- `make`
+
+and the following haskell libs:
+
+- `haskell-zlib`
+- `cryptohash`
+- `base16-bytestring`
+- `unix-compat`
+- `split`
 
 ## Compiling
 
@@ -16,8 +25,24 @@ Just run `make` in the root.
 
 ## Running
 
+### Local
+
 **Only in the root of your project**, run `[oshit path]/oshit [<command>] [<args>]`
 
+### Using Docker
+
+We provide a Dockerfile, which may be safer and contains all the dependencies
+pre-installed. On the root of the project, run 
+
+~~~bash 
+docker build -t oshit .
+~~~
+
+for build the `oshit` Docker image. For executing it, run:
+
+~~~bash
+docker run -v "[oshit path]:/oshit" -e OSHIT\_AUTHOR=[author] -e OSHIT\_EMAIL=[email] -it oshit
+~~~ 
 
 ## Commands (so far)
 
