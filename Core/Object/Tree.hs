@@ -109,7 +109,7 @@ parseTree raw = Tree . getEntries $ content
           | otherwise     = (mode, name, hash):(getEntries rest)
           where (mode', rest')   = B.splitAt 6 $ bs
                 (name',  rest'') = B.span (/= '\0') $ B.drop 1 rest'
-                (hash', rest)    = B.splitAt 40 $ B.drop 1 rest''
+                (hash', rest)    = B.splitAt 20 $ B.drop 1 rest''
 
                 mode = B.unpack mode'
                 name = B.unpack name'
