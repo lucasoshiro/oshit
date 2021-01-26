@@ -9,10 +9,11 @@ import Util.Util
 
 import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.Binary                as Bin
-import qualified Data.Map                   as Map
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Lazy.Char8 as L
+import qualified Data.Map                   as Map
+import qualified Data.Set                   as Set
 import qualified System.Directory           as Dir
 
 import Data.Char
@@ -219,3 +220,52 @@ updateAndStoreIndex index files = do
   let adds = map addFileToIndex files
   newIndex <- foldl (>>=) (return index) adds
   storeIndex newIndex
+
+indexStatus :: IO ([FilePath], [FilePath], [FilePath])
+indexStatus = do
+  index <- readIndex
+  workdir <- listDirectoryRecursive "."
+  workdirStatus <- sequence $ map getFileStatus workdir
+
+  let index' = Map.fromList $
+               [ (B.unpack path', mtime)
+               | (path', IndexEntry {mtime = mtime}) <- Map.toList index
+               ]
+
+
+  let workdir' = Map.fromList $
+                 [ (path, (\(CTime c) -> toBS64 c) $ modificationTime status)
+                 | (path, status) <- zip workdir workdirStatus
+                 ]
+
+  let indexFiles   = Map.keysSet index'
+  let workdirFiles = Set.fromList workdir
+
+  let deleted   = indexFiles   Set.\\ workdirFiles
+  let untracked = workdirFiles Set.\\ indexFiles
+
+  let joined = zipMap
+               (index' `Map.withoutKeys` deleted)
+               (workdir' `Map.withoutKeys` untracked)
+
+  let touched = [ path
+                | (path, (timeI, timeW)) <- Map.toList joined
+                , (timeI /= timeW)
+                ]
+
+  let contentHash path = B.readFile path >>= return . hashObject . Blob
+
+  modified <- (
+        sequence $ do
+            f <- touched
+            [ do
+                wHash <- contentHash f
+                let iHash = (\(IndexEntry {hash = hash}) -> B16.encode hash) $
+                            (index Map.! (B.pack f))
+                if wHash == iHash
+                  then return [f]
+                  else return []
+              ]
+        ) >>= return . (>>= id)
+       
+  return (modified, sort . Set.toList $ deleted, sort . Set.toList $ untracked)

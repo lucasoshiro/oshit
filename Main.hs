@@ -5,6 +5,7 @@ import Commands.Plumbing.Index.AddBlob
 import Commands.Plumbing.Index.ListIndex
 import Commands.Plumbing.Index.TreeFromIndex
 import Commands.Plumbing.Object.CreateBlob
+import Commands.Plumbing.Object.ListTree
 import Commands.Plumbing.Object.ShowObj
 import Commands.Plumbing.Reference.UpdateBranch
 import Commands.Plumbing.Reference.UpdateHead
@@ -28,6 +29,7 @@ runCmd "commit"           = cmdCommit
 runCmd "init"             = cmdInit
 runCmd "log"              = cmdLog
 runCmd "list-index"       = cmdListIndex
+runCmd "list-tree"        = cmdListTree
 runCmd "show-obj"         = cmdShowObj
 runCmd "tree-from-index"  = cmdTreeFromIndex
 runCmd "update-branch"    = cmdUpdateBranch

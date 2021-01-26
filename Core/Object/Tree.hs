@@ -19,7 +19,7 @@ data HashedInnerTree = HashedInnerTree (Hash, Tree, [HashedInnerTree])
 instance Object Tree where
   objectType _ = B.pack "tree"
 
-  objectParse = parseTree
+  objectParse = return . parseTree
 
   objectRawContent (Tree children) = B.concat $
     [[ B.pack mode, B.pack " "
@@ -99,8 +99,8 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
         content = blobEntries ++ treeEntries
 treesFromInnerTrees _ = []
 
-parseTree :: B.ByteString -> IO Tree
-parseTree raw = return . Tree . getEntries $ content
+parseTree :: B.ByteString -> Tree
+parseTree raw = Tree . getEntries $ content
   where content = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
 
         getEntries :: B.ByteString -> [(FileMode, FilePath, Hash)]
@@ -114,3 +114,21 @@ parseTree raw = return . Tree . getEntries $ content
                 mode = B.unpack mode'
                 name = B.unpack name'
                 hash = B16.encode hash'
+
+listTreeRecursive :: Tree -> IO [FilePath]
+listTreeRecursive = flip listTreeRecursive' ""
+
+listTreeRecursive' :: Tree -> FilePath -> IO [FilePath]
+listTreeRecursive' (Tree entries) path = do
+  let x :: IO [[FilePath]]
+      x = sequence $ do
+        (mode, name, hash) <- entries
+        let childPath = path ++ name :: FilePath
+        return $ do
+          childTree <- loadObject hash :: IO Tree
+          if mode == dirMode
+            then listTreeRecursive' childTree (childPath ++ "/") >>= return . (childPath :)
+            else return [childPath]
+            
+  x >>= return . (>>= id)
+

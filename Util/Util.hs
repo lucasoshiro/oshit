@@ -7,6 +7,9 @@ import qualified Data.Map                   as Map
 
 import Data.Char (isSpace)
 import Data.Int
+import Data.List
+
+import System.Directory
 
 invertMap :: Ord b => Map.Map a b -> Map.Map b [a]
 invertMap m = foldl addInverted initial (Map.toList m)
@@ -36,3 +39,21 @@ toBS32 = toByteString . to32
 
 toBS64 :: Integral a => a -> B.ByteString
 toBS64 = toByteString . to64
+
+listDirectoryRecursive :: FilePath -> IO [FilePath]
+listDirectoryRecursive path = do
+  contents <- getDirectoryContents path >>= return . (\\ [".", "..", ".git"])
+  let x :: IO [[FilePath]]
+      x = sequence $ do
+        content <- contents
+        let childPath = path ++ "/" ++ content :: FilePath
+        return $ do
+          isDir <- doesDirectoryExist childPath
+          if isDir
+            then listDirectoryRecursive childPath >>= return . (childPath :)
+            else return [childPath] -- IO [FilePath]
+            
+  x >>= return . (>>= id)
+
+zipMap :: Ord k => Map.Map k a -> Map.Map k b -> Map.Map k (a, b)
+zipMap m1 m2 = Map.mapWithKey (\k v1 -> (v1, m2 Map.! k)) m1

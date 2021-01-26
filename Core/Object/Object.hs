@@ -11,7 +11,6 @@ import qualified System.Directory           as Dir
 import Core.Core
 
 type ObjectType = B.ByteString
-type FileMode = String
 
 data Tree = Tree [(FileMode, FilePath, Hash)]
 data Blob = Blob B.ByteString
