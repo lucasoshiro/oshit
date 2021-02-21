@@ -2,6 +2,7 @@ module Commands.Porcelain.Reflog where
 
 import Core.Core
 import Core.Reflog
+import Core.Reference
 import Util.Colors
 
 import Data.List
@@ -10,7 +11,15 @@ import qualified Data.ByteString.Char8 as B
 
 cmdReflog :: Command
 cmdReflog (ref:_) = do
-  reflog <- readReflogFile ref
+  isBranch <- branchExists ref
+  let isStash = ref == "stash"
+
+  reflog <- if isBranch
+            then readBranchReflog ref
+            else if isStash
+                 then readStashReflog
+                 else readSymrefReflog ref
+
   putStrLn . prettyReflog reflog $ ref
 cmdReflog [] = cmdReflog ["HEAD"]
 

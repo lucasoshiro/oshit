@@ -9,7 +9,6 @@ import qualified Data.ByteString.Char8 as B
 
 import Core.Core
 import Core.Object (gitTimeFormat)
-import Core.Reference (branchExists)
 
 data ReflogEntry = ReflogEntry
   { oldHash   :: Hash
@@ -21,6 +20,9 @@ data ReflogEntry = ReflogEntry
   }
 
 type Reflog = [ReflogEntry]
+
+reflogBasePath :: String
+reflogBasePath = ".git/logs/"
 
 reflogToString :: Reflog -> String
 reflogToString reflog = intercalate "\n" $ map reflogEntryToString reflog
@@ -79,18 +81,14 @@ parseReflogEntry s = ReflogEntry
                     dropWhile (/= '>') $
                     authorLine
 
-readReflogFile :: String -> IO Reflog
-readReflogFile ref = do
-  let reflogBasePath = ".git/logs/"
-  isBranch <- branchExists ref
+readReflog :: FilePath -> IO Reflog
+readReflog path = readFile path >>= return . parseReflog
+  
+readSymrefReflog :: String -> IO Reflog
+readSymrefReflog ref = readReflog $ reflogBasePath ++ ref
 
-  let isStash = ref == "stash"
+readStashReflog :: IO Reflog
+readStashReflog = readReflog $ reflogBasePath ++ "refs/stash"
 
-  let path = if isBranch
-             then reflogBasePath ++ "refs/heads/" ++ ref
-             else if isStash
-                  then "refs/stash"
-                  else reflogBasePath ++ ref
-
-  content <- readFile path
-  return . parseReflog $ content
+readBranchReflog :: String -> IO Reflog
+readBranchReflog ref = readReflog $ reflogBasePath ++ "refs/heads/" ++ ref
