@@ -15,6 +15,7 @@ import Commands.Porcelain.Index.Add
 import Commands.Porcelain.Init
 import Commands.Porcelain.Log
 import Commands.Porcelain.Reference.Branch
+import Commands.Porcelain.Reflog
 
 import System.Environment
 
@@ -30,6 +31,7 @@ runCmd "init"             = cmdInit
 runCmd "log"              = cmdLog
 runCmd "list-index"       = cmdListIndex
 runCmd "list-tree"        = cmdListTree
+runCmd "reflog"           = cmdReflog
 runCmd "show-obj"         = cmdShowObj
 runCmd "tree-from-index"  = cmdTreeFromIndex
 runCmd "update-branch"    = cmdUpdateBranch

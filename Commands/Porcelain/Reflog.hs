@@ -1,0 +1,28 @@
+module Commands.Porcelain.Reflog where
+
+import Core.Core
+import Core.Reflog
+import Util.Colors
+
+import Data.List
+
+import qualified Data.ByteString.Char8 as B
+
+cmdReflog :: Command
+cmdReflog (ref:_) = do
+  reflog <- readReflogFile ref
+  putStrLn . prettyReflog reflog $ ref
+cmdReflog [] = cmdReflog ["HEAD"]
+
+prettyReflog :: Reflog -> String -> String
+prettyReflog reflog reference = intercalate "\n" $ prettyEntries
+  where prettyEntries = zipWith prettyReflogEntry [0..] . reverse $ reflog 
+
+        prettyReflogEntry :: Int -> ReflogEntry -> String
+        prettyReflogEntry index (
+          ReflogEntry
+            { newHash = newHash
+            , title   = title
+            }) = intercalate " " [colorize yellow shortHash, relative, title]
+          where shortHash = B.unpack . B.take 7 $ newHash
+                relative = reference ++ "@{" ++ show index ++ "}:"
