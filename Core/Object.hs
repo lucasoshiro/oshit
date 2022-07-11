@@ -90,6 +90,18 @@ loadObject hash = ObjectIO blobIO treeIO commitIO
         treeIO   = raw >>= objectParse
         commitIO = raw >>= objectParse
 
+loadBlob :: Hash -> BlobIO
+loadBlob hash = blobIO
+  where (ObjectIO blobIO _ _) = loadObject hash
+        
+loadTree :: Hash -> TreeIO
+loadTree hash = treeIO
+  where (ObjectIO _ treeIO _) = loadObject hash
+
+loadCommit :: Hash -> CommitIO
+loadCommit hash = commitIO
+  where (ObjectIO _ _ commitIO) = loadObject hash
+
 objectFileContent :: Object obj => obj -> B.ByteString
 objectFileContent obj = uncompressed
   where content      = objectRawContent obj
