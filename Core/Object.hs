@@ -38,7 +38,7 @@ type BlobIO   = IO Blob
 type TreeIO   = IO Tree
 type CommitIO = IO Commit
 
-data ObjectIO = FromBlob BlobIO | FromTree TreeIO | FromCommit CommitIO
+data ObjectIO = ObjectIO BlobIO TreeIO CommitIO
 
 data InnerTreeNode = InnerLeaf Hash
                    | InnerTree FilePath (Map.Map FilePath InnerTreeNode)
@@ -83,16 +83,12 @@ loadObjectLegacy hash = loadRawObject hash >>= objectParse
 loadRawObject :: Hash -> IO B.ByteString
 loadRawObject hash = B.readFile (hashPath hash) >>= return . decompress
 
-loadObject :: Hash -> IO ObjectIO
-loadObject hash = do
-  raw <- loadRawObject hash
-  let objType = rawObjectType raw
-
-  case objType of
-    Just BlobType   -> return . FromBlob   . objectParse $ raw
-    Just TreeType   -> return . FromTree   . objectParse $ raw
-    Just CommitType -> return . FromCommit . objectParse $ raw
-    Nothing         -> fail "Invalid object"
+loadObject :: Hash -> ObjectIO
+loadObject hash = ObjectIO blobIO treeIO commitIO
+  where raw      = loadRawObject hash
+        blobIO   = raw >>= objectParse
+        treeIO   = raw >>= objectParse
+        commitIO = raw >>= objectParse
 
 objectFileContent :: Object obj => obj -> B.ByteString
 objectFileContent obj = uncompressed
