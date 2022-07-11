@@ -118,11 +118,10 @@ objectExists hashStr = do
 -- Blob
 
 instance Object Blob where
-  objectParse bs =
-    if parsedType == "blob"
-    then return $ Blob content
-    else fail ""
-    where parsedType = B.unpack $ (B.split ' ' bs) !! 0
+  objectParse bs = case objType of
+    Just BlobType -> return . Blob $ content
+    _             -> fail "Invalid blob"
+    where objType = rawObjectType bs
           content = (B.split '\0' bs) !! 1
 
   objectType _ = BlobType
@@ -138,8 +137,13 @@ gitTimeFormat = "%s %z"
 instance Object Commit where
   objectType _ = CommitType
 
-  objectParse raw = return commit
-    where content      = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
+  objectParse raw =
+    case objType of
+      Just CommitType -> return commit
+      _           -> fail "Invalid commit"
+
+    where objType      = rawObjectType raw
+          content      = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
           lines        = B.split '\n' content
           headerLines  = takeWhile (/= B.empty) lines
           treeLine     = headerLines !! 0
@@ -186,12 +190,17 @@ instance Object Commit where
   objectPretty = B.unpack . objectRawContent
 
 
+-- Tree
+
 instance Object Tree where
   objectType _ = TreeType
 
-  objectParse raw = case parseTree raw of
-                      (Just tree) -> return tree
-                      Nothing     -> fail "Invalid tree"
+  objectParse raw = case objType of
+    Just TreeType -> case parseTree raw of
+                       (Just tree) -> return tree
+                       Nothing     -> fail "Invalid tree"
+    _             -> fail "Invalid tree"
+    where objType = rawObjectType raw
 
   objectRawContent (Tree children) = B.concat $
     [[ B.pack . stringFromFileMode $ mode, B.pack " "
