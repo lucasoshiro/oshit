@@ -29,7 +29,7 @@ data Commit = Commit
   }
 
 class Object obj where
-  objectType       :: obj -> B.ByteString
+  objectType       :: obj -> ObjectType
   objectParse      :: B.ByteString -> IO obj
   objectRawContent :: obj -> B.ByteString
   objectPretty     :: obj -> String
@@ -50,6 +50,11 @@ parseObjectType "blob"   = Just BlobType
 parseObjectType "tree"   = Just TreeType
 parseObjectType "commit" = Just CommitType
 parseObjectType _        = Nothing
+
+unparseObjectType :: ObjectType -> String
+unparseObjectType BlobType   = "blob"
+unparseObjectType TreeType   = "tree"
+unparseObjectType CommitType = "commit"
 
 hashObject :: Object obj => obj -> Hash
 hashObject = B16.encode . SHA1.hash . objectFileContent
@@ -94,10 +99,10 @@ objectFileContent obj = uncompressed
   where content      = objectRawContent obj
         size         = B.pack $ show $ B.length content
         objType      = objectType obj
-        uncompressed = B.concat [objType, B.pack " ", size, B.pack "\0", content]
-
-rawObjectTypeLegacy :: B.ByteString -> B.ByteString
-rawObjectTypeLegacy = B.takeWhile (/= ' ')
+        uncompressed = B.concat [ B.pack . unparseObjectType $ objType
+                                , B.pack " "
+                                , size
+                                , B.pack "\0", content]
 
 rawObjectType :: B.ByteString -> Maybe ObjectType
 rawObjectType = parseObjectType . B.unpack
@@ -124,7 +129,7 @@ instance Object Blob where
     where parsedType = B.unpack $ (B.split ' ' bs) !! 0
           content = (B.split '\0' bs) !! 1
 
-  objectType _ = B.pack "blob"
+  objectType _ = BlobType
 
   objectRawContent (Blob content) = content
 
@@ -135,7 +140,7 @@ instance Object Blob where
 gitTimeFormat = "%s %z"
 
 instance Object Commit where
-  objectType _ = B.pack "commit"
+  objectType _ = CommitType
 
   objectParse raw = return commit
     where content      = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
@@ -186,7 +191,7 @@ instance Object Commit where
 
 
 instance Object Tree where
-  objectType _ = B.pack "tree"
+  objectType _ = TreeType
 
   objectParse raw = case parseTree raw of
                       (Just tree) -> return tree
