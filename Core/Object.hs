@@ -14,9 +14,9 @@ import qualified Data.Map                   as Map
 import qualified System.Directory           as Dir
 
 import Core.Core
-import Util.Util
 
 type ObjectType = B.ByteString
+
 
 data Tree = Tree [(FileMode, FilePath, Hash)]
 data Blob = Blob B.ByteString
@@ -34,6 +34,12 @@ class Object obj where
   objectParse      :: B.ByteString -> IO obj
   objectRawContent :: obj -> B.ByteString
   objectPretty     :: obj -> String
+
+type BlobIO   = IO Blob
+type TreeIO   = IO Tree
+type CommitIO = IO Commit
+
+data ObjectIO = FromBlob BlobIO | FromTree TreeIO | FromCommit CommitIO
 
 data InnerTreeNode = InnerLeaf Hash
                    | InnerTree FilePath (Map.Map FilePath InnerTreeNode)
@@ -62,8 +68,8 @@ storeObject obj = do
         uncompressed = objectFileContent obj
         compressed   = compress uncompressed
 
-loadObject :: Object obj => Hash -> IO obj
-loadObject hash = loadRawObject hash >>= objectParse
+loadObjectLegacy :: Object obj => Hash -> IO obj
+loadObjectLegacy hash = loadRawObject hash >>= objectParse
 
 loadRawObject :: Hash -> IO B.ByteString
 loadRawObject hash = B.readFile (hashPath hash) >>= return . decompress
@@ -268,7 +274,7 @@ listTreeRecursive' (Tree entries) path = do
         (mode, name, hash) <- entries
         let childPath = path ++ name :: FilePath
         return $ do
-          childTree <- loadObject hash :: IO Tree
+          childTree <- loadObjectLegacy hash :: IO Tree
           case mode of
              DirMode -> listTreeRecursive' childTree (childPath ++ "/") >>= return . (childPath :)
              StdMode -> return [childPath]
