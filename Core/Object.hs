@@ -14,7 +14,7 @@ import qualified Data.Map                   as Map
 import qualified System.Directory           as Dir
 
 import Core.Core
--- import Core.Index
+import Util.Util
 
 type ObjectType = B.ByteString
 
@@ -238,7 +238,7 @@ parseTree raw = Tree . getEntries $ content
         getEntries bs
           | bs == B.empty = []
           | otherwise     = (mode, name, hash):(getEntries rest)
-          where (mode', rest')   = B.splitAt 6 $ bs
+          where (mode', rest')   = B.break (== ' ') bs
                 (name',  rest'') = B.span (/= '\0') $ B.drop 1 rest'
                 (hash', rest)    = B.splitAt 20 $ B.drop 1 rest''
 
@@ -257,7 +257,7 @@ listTreeRecursive' (Tree entries) path = do
         let childPath = path ++ name :: FilePath
         return $ do
           childTree <- loadObject hash :: IO Tree
-          if mode == dirMode
+          if parseOctal mode == parseOctal dirMode
             then listTreeRecursive' childTree (childPath ++ "/") >>= return . (childPath :)
             else return [childPath]
             

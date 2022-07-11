@@ -57,3 +57,6 @@ listDirectoryRecursive path = do
 
 zipMap :: Ord k => Map.Map k a -> Map.Map k b -> Map.Map k (a, b)
 zipMap m1 m2 = Map.mapWithKey (\k v1 -> (v1, m2 Map.! k)) m1
+
+parseOctal :: String -> Int
+parseOctal = read . ("0o" ++)

@@ -13,7 +13,7 @@ import Data.List
 import Data.List.Split
 import Foreign.C.Types
 import System.PosixCompat.Files
-import System.PosixCompat.Types
+import System.PosixCompat.Types hiding (FileMode)
 
 import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.Binary                as Bin
@@ -268,7 +268,7 @@ indexStatus = do
                   else return []
               ]
         ) >>= return . (>>= id)
-       
+
   return (modified, sort . Set.toList $ deleted, sort . Set.toList $ untracked)
 
 treesFromIndex :: Index -> [Tree]
@@ -284,4 +284,25 @@ treesFromIndex index = trees
 
         trees = treesFromInnerTrees filesystem
 
+indexFromTree :: Tree -> IO Index
+indexFromTree (Tree entries) = indexFromTree' [] entries
 
+indexFromTree' :: [String] -> [(FileMode, FilePath, Hash)] -> IO Index
+indexFromTree' _ [] = return $ Map.empty
+indexFromTree' path ((entryMode, name, entryHash):rest) =
+  do
+    let fullPath = path ++ [name]
+    let rawFullPath = intercalate "/" fullPath
+    let entryModeInt = parseOctal entryMode :: Int
+
+    let subIndex
+          | entryModeInt == parseOctal dirMode =
+            loadObject entryHash >>= \(Tree entries) -> indexFromTree' fullPath entries
+          | entryModeInt == parseOctal standardMode =
+            return $ addBlobToIndex rawFullPath entryHash Map.empty
+          | otherwise =
+            return Map.empty
+
+    it <- subIndex
+    r <- indexFromTree' path rest
+    return $ r `Map.union` it
