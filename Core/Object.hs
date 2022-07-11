@@ -164,10 +164,12 @@ instance Object Commit where
 instance Object Tree where
   objectType _ = B.pack "tree"
 
-  objectParse = return . parseTree
+  objectParse raw = case parseTree raw of
+                      (Just tree) -> return tree
+                      Nothing     -> fail "Invalid tree"
 
   objectRawContent (Tree children) = B.concat $
-    [[ B.pack mode, B.pack " "
+    [[ B.pack . stringFromFileMode $ mode, B.pack " "
      , B.pack name, B.pack "\0"
      , hash
      ]
@@ -175,10 +177,15 @@ instance Object Tree where
     ] >>= return . B.concat
 
   objectPretty (Tree entries) = intercalate "\n" $
-    [ let objType = case filemode of "040000" -> "tree"
-                                     "100644" -> "blob"
-                                     _ -> ""
-      in filemode ++ " " ++ objType ++ " " ++ B.unpack hash ++ "    " ++ name
+    [ let objType = case filemode of DirMode -> "tree"
+                                     StdMode -> "blob"
+      in stringFromFileMode filemode
+      ++ " "
+      ++ objType
+      ++ " "
+      ++ B.unpack hash
+      ++ "    "
+      ++ name
     | (filemode, name, hash) <- entries
     ]
 
@@ -206,7 +213,7 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
           (name, child) <- nodeList
           case child of (InnerTree _ _) -> []
                         (InnerLeaf hash) -> [
-                          ("100644", name, (fromRight B.empty . B16.decode $ hash))
+                          (StdMode, name, (fromRight B.empty . B16.decode $ hash))
                           ]
 
         descendentTrees' :: [(FilePath, [Tree])]
@@ -225,26 +232,31 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
         treeEntries :: [(FileMode, FilePath, Hash)]
         treeEntries = do
           (name, tree) <- childTrees
-          [ ("040000", name, (fromRight B.empty . B16.decode . hashObject $ tree)) ]
+          [ (DirMode, name, (fromRight B.empty . B16.decode . hashObject $ tree)) ]
 
         content = blobEntries ++ treeEntries
 treesFromInnerTrees _ = []
 
-parseTree :: B.ByteString -> Tree
-parseTree raw = Tree . getEntries $ content
-  where content = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
+parseTree :: B.ByteString -> Maybe Tree
+parseTree raw = do
+  let content = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
+  let getEntries bs
+        | bs == B.empty = Just []
+        | otherwise     = do
+            let (mode', rest')  = B.break (== ' ') bs
+            let (name', rest'') = B.span (/= '\0') $ B.drop 1 rest'
+            let (hash', rest)   = B.splitAt 20 $ B.drop 1 rest''
 
-        getEntries :: B.ByteString -> [(FileMode, FilePath, Hash)]
-        getEntries bs
-          | bs == B.empty = []
-          | otherwise     = (mode, name, hash):(getEntries rest)
-          where (mode', rest')   = B.break (== ' ') bs
-                (name',  rest'') = B.span (/= '\0') $ B.drop 1 rest'
-                (hash', rest)    = B.splitAt 20 $ B.drop 1 rest''
+            let name = B.unpack name'
+            let hash = B16.encode hash'
 
-                mode = B.unpack mode'
-                name = B.unpack name'
-                hash = B16.encode hash'
+            mode <- fileModeFromString . B.unpack $ mode'
+            restEntries <- getEntries rest
+
+            return $ (mode, name, hash):restEntries
+
+  entries <- getEntries content
+  return . Tree $ entries
 
 listTreeRecursive :: Tree -> IO [FilePath]
 listTreeRecursive = flip listTreeRecursive' ""
@@ -257,9 +269,8 @@ listTreeRecursive' (Tree entries) path = do
         let childPath = path ++ name :: FilePath
         return $ do
           childTree <- loadObject hash :: IO Tree
-          if parseOctal mode == parseOctal dirMode
-            then listTreeRecursive' childTree (childPath ++ "/") >>= return . (childPath :)
-            else return [childPath]
-            
-  x >>= return . (>>= id)
+          case mode of
+             DirMode -> listTreeRecursive' childTree (childPath ++ "/") >>= return . (childPath :)
+             StdMode -> return [childPath]
 
+  x >>= return . (>>= id)

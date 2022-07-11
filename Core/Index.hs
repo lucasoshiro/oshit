@@ -293,15 +293,10 @@ indexFromTree' path ((entryMode, name, entryHash):rest) =
   do
     let fullPath = path ++ [name]
     let rawFullPath = intercalate "/" fullPath
-    let entryModeInt = parseOctal entryMode :: Int
 
-    let subIndex
-          | entryModeInt == parseOctal dirMode =
-            loadObject entryHash >>= \(Tree entries) -> indexFromTree' fullPath entries
-          | entryModeInt == parseOctal standardMode =
-            return $ addBlobToIndex rawFullPath entryHash Map.empty
-          | otherwise =
-            return Map.empty
+    let subIndex = case entryMode of
+          DirMode -> loadObject entryHash >>= \(Tree entries) -> indexFromTree' fullPath entries
+          StdMode -> return $ addBlobToIndex rawFullPath entryHash Map.empty
 
     it <- subIndex
     r <- indexFromTree' path rest
