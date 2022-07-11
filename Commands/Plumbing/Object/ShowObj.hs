@@ -8,7 +8,7 @@ import qualified Data.ByteString.Char8 as B
 cmdShowObj :: Command
 cmdShowObj (hash:_) = do
   rawObj <- loadRawObject $ B.pack hash
-  let objType = B.unpack . rawObjectType $ rawObj
+  let objType = B.unpack . rawObjectTypeLegacy $ rawObj
 
   case objType of "blob" -> do
                     obj <- objectParse rawObj :: IO Blob

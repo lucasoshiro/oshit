@@ -15,8 +15,7 @@ import qualified System.Directory           as Dir
 
 import Core.Core
 
-type ObjectType = B.ByteString
-
+data ObjectType = BlobType | TreeType | CommitType
 
 data Tree = Tree [(FileMode, FilePath, Hash)]
 data Blob = Blob B.ByteString
@@ -30,7 +29,7 @@ data Commit = Commit
   }
 
 class Object obj where
-  objectType       :: obj -> ObjectType
+  objectType       :: obj -> B.ByteString
   objectParse      :: B.ByteString -> IO obj
   objectRawContent :: obj -> B.ByteString
   objectPretty     :: obj -> String
@@ -46,6 +45,11 @@ data InnerTreeNode = InnerLeaf Hash
 
 data HashedInnerTree = HashedInnerTree (Hash, Tree, [HashedInnerTree])
 
+parseObjectType :: String -> Maybe ObjectType
+parseObjectType "blob"   = Just BlobType
+parseObjectType "tree"   = Just TreeType
+parseObjectType "commit" = Just CommitType
+parseObjectType _        = Nothing
 
 hashObject :: Object obj => obj -> Hash
 hashObject = B16.encode . SHA1.hash . objectFileContent
@@ -74,6 +78,17 @@ loadObjectLegacy hash = loadRawObject hash >>= objectParse
 loadRawObject :: Hash -> IO B.ByteString
 loadRawObject hash = B.readFile (hashPath hash) >>= return . decompress
 
+loadObject :: Hash -> IO ObjectIO
+loadObject hash = do
+  raw <- loadRawObject hash
+  let objType = rawObjectType raw
+
+  case objType of
+    Just BlobType   -> return . FromBlob   . objectParse $ raw
+    Just TreeType   -> return . FromTree   . objectParse $ raw
+    Just CommitType -> return . FromCommit . objectParse $ raw
+    Nothing         -> fail "Invalid object"
+
 objectFileContent :: Object obj => obj -> B.ByteString
 objectFileContent obj = uncompressed
   where content      = objectRawContent obj
@@ -81,8 +96,11 @@ objectFileContent obj = uncompressed
         objType      = objectType obj
         uncompressed = B.concat [objType, B.pack " ", size, B.pack "\0", content]
 
-rawObjectType :: B.ByteString -> ObjectType
-rawObjectType = B.takeWhile (/= ' ')
+rawObjectTypeLegacy :: B.ByteString -> B.ByteString
+rawObjectTypeLegacy = B.takeWhile (/= ' ')
+
+rawObjectType :: B.ByteString -> Maybe ObjectType
+rawObjectType = parseObjectType . B.unpack
 
 hashPath :: Hash -> FilePath
 hashPath hash = path
