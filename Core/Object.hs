@@ -113,7 +113,7 @@ objectFileContent obj = uncompressed
                                 , B.pack "\0", content]
 
 rawObjectType :: B.ByteString -> Maybe ObjectType
-rawObjectType = parseObjectType . B.unpack
+rawObjectType = parseObjectType . B.unpack . (B.takeWhile (/= ' '))
 
 hashPath :: Hash -> FilePath
 hashPath hash = path
@@ -132,7 +132,7 @@ objectExists hashStr = do
 instance Object Blob where
   objectParse bs = case objType of
     Just BlobType -> return . Blob $ content
-    _             -> fail "Invalid blob"
+    _             -> fail "Not a blob"
     where objType = rawObjectType bs
           content = (B.split '\0' bs) !! 1
 
@@ -152,7 +152,7 @@ instance Object Commit where
   objectParse raw =
     case objType of
       Just CommitType -> return commit
-      _           -> fail "Invalid commit"
+      _           -> fail "Not a commit"
 
     where objType      = rawObjectType raw
           content      = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
@@ -210,7 +210,7 @@ instance Object Tree where
   objectParse raw = case objType of
     Just TreeType -> case parseTree raw of
                        (Just tree) -> return tree
-                       Nothing     -> fail "Invalid tree"
+                       Nothing     -> fail "Not a tree"
     _             -> fail "Invalid tree"
     where objType = rawObjectType raw
 
@@ -304,19 +304,25 @@ parseTree raw = do
   entries <- getEntries content
   return . Tree $ entries
 
-listTreeRecursive :: Tree -> IO [FilePath]
-listTreeRecursive = flip listTreeRecursive' ""
+treeContentsRecursive :: TreeIO -> IO [(FileMode, FilePath, Hash)]
+treeContentsRecursive = (>>= \(Tree entries) -> treeContentsRecursive' [] entries)
 
-listTreeRecursive' :: Tree -> FilePath -> IO [FilePath]
-listTreeRecursive' (Tree entries) path = do
-  let x :: IO [[FilePath]]
-      x = sequence $ do
-        (mode, name, hash) <- entries
-        let childPath = path ++ name :: FilePath
-        return $ do
-          childTree <- loadObjectLegacy hash :: IO Tree
-          case mode of
-             DirMode -> listTreeRecursive' childTree (childPath ++ "/") >>= return . (childPath :)
-             StdMode -> return [childPath]
+treeContentsRecursive' :: [String] -> [(FileMode, FilePath, Hash)] -> IO [(FileMode, FilePath, Hash)]
+treeContentsRecursive' _ [] = return []
+treeContentsRecursive' path ((entryMode, name, entryHash):rest) =
+  do
+    let fullPath = path ++ [name]
+    let rawFullPath = intercalate "/" fullPath
 
-  x >>= return . (>>= id)
+    let subList = case entryMode of
+          DirMode -> loadTree entryHash >>= \(Tree entries) -> treeContentsRecursive' fullPath entries
+          StdMode -> return $ [(StdMode, rawFullPath, entryHash)]
+
+    it <- subList
+    r <- treeContentsRecursive' path rest
+    return $ it ++ r
+
+listTreeRecursive :: TreeIO -> IO [FilePath]
+listTreeRecursive treeIO = do
+  contents <- treeContentsRecursive treeIO
+  return [path | (_, path, _) <- contents]

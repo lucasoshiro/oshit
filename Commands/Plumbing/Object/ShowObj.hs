@@ -23,7 +23,4 @@ cmdShowObj (hash:_) = do
                     putStrLn . objectPretty $ obj
 
                   Nothing -> fail "invalid object"
-
-  
-  -- B.putStr $ objectRawContent obj
 cmdShowObj _ = fail "hash missing"
