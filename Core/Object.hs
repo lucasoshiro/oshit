@@ -2,6 +2,7 @@ module Core.Object where
 
 import Data.Either
 import Data.List
+import Data.List.Split
 import Data.Maybe
 import Data.Time
 
@@ -68,7 +69,12 @@ decompress = L.toStrict . Zlib.decompress . L.fromStrict
 storeObject :: Object obj => obj -> IO ()
 storeObject obj = do
   Dir.createDirectoryIfMissing True completeDir
-  B.writeFile path compressed
+  exists <- objectExists hashStr
+
+  if exists
+    then return ()
+    else B.writeFile path compressed
+
   where hashStr      = B.unpack $ hashObject obj
         dir          = take 2 $ hashStr
         filename     = drop 2 $ hashStr
@@ -326,3 +332,16 @@ listTreeRecursive :: TreeIO -> IO [FilePath]
 listTreeRecursive treeIO = do
   contents <- treeContentsRecursive treeIO
   return [path | (_, path, _) <- contents]
+
+treesFromContents :: [(FileMode, FilePath, Hash)] -> [TreeIO]
+treesFromContents contents = [storeObject tree >> return tree | tree <- trees]
+  where splittedIndex = [ (hash, splitOn "/" path)
+                        | (_, path, hash) <- contents
+                        ]
+        files = [ (hash, init path, last path)
+                | (hash, path) <- splittedIndex
+                ]
+
+        filesystem = foldl insertToInnerTree (InnerTree "" Map.empty) files
+
+        trees = treesFromInnerTrees filesystem

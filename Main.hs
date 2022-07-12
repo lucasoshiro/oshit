@@ -4,6 +4,7 @@ import Commands.Plumbing.Commit.CommitFromTree
 import Commands.Plumbing.Index.AddBlob
 import Commands.Plumbing.Index.ListIndex
 import Commands.Plumbing.Index.TreeFromIndex
+import Commands.Plumbing.Merge.MergeTree
 import Commands.Plumbing.Object.CreateBlob
 import Commands.Plumbing.Object.ListTree
 import Commands.Plumbing.Object.ShowObj
@@ -29,6 +30,7 @@ runCmd "create-blob"      = cmdCreateBlob
 runCmd "commit"           = cmdCommit
 runCmd "init"             = cmdInit
 runCmd "log"              = cmdLog
+runCmd "merge-tree"       = cmdMergeTree
 runCmd "list-index"       = cmdListIndex
 runCmd "list-tree"        = cmdListTree
 runCmd "reflog"           = cmdReflog

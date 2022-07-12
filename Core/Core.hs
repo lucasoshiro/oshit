@@ -28,4 +28,4 @@ fileModeFromString = fileModeFromString' . parseOctal
 
 stringFromFileMode :: FileMode -> String
 stringFromFileMode StdMode = "100644"
-stringFromFileMode DirMode = "040000"
+stringFromFileMode DirMode = "40000"
