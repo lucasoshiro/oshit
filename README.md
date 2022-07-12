@@ -19,6 +19,25 @@ and the following haskell libs:
 - `unix-compat`
 - `split`
 
+### Installing dependencies on Arch/Manjaro
+
+~~~bash
+sudo pacman -S ghc make haskell-zlib haskell-cryptohash haskell-base16-bytestring haskell-unix-compat haskell-split
+~~~
+
+### Installing dependencies on Mac OS
+~~~
+brew install ghc cabal-install make
+cabal install zlib cryptohash base16-bytestring unix-compat split
+~~~
+
+### Notes on Debian and Ubuntu
+The oficial versions of the packages needed to build and run Oshit can be
+outdated! Be careful! Try to install them through other sources, such as cabal
+or stack!
+
+I'm providing here a Dockerfile based on Arch, if you prefer.
+
 ## Compiling
 
 Just run `make` in the root.
