@@ -16,6 +16,7 @@ import Commands.Porcelain.Commit.Commit
 import Commands.Porcelain.Index.Add
 import Commands.Porcelain.Init
 import Commands.Porcelain.Log
+import Commands.Porcelain.Merge.CherryPick
 import Commands.Porcelain.Reference.Branch
 import Commands.Porcelain.Reflog
 
@@ -27,6 +28,7 @@ runCmd "add"              = cmdAdd
 runCmd "add-blob"         = cmdAddBlob
 runCmd "branch"           = cmdBranch
 runCmd "commit-from-tree" = cmdCommitFromTree
+runCmd "cherry-pick"      = cmdCherryPick
 runCmd "create-blob"      = cmdCreateBlob
 runCmd "commit"           = cmdCommit
 runCmd "init"             = cmdInit

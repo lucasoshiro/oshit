@@ -53,6 +53,7 @@ docker run -v "[oshit path]:/oshit" -e OSHIT_AUTHOR=[author] -e OSHIT_EMAIL=[ema
 - `add`: similar to `git add`. You **must** provide a file!
 - `branch`: similar to `git branch`. Without arguments, show branches. With an argument, create a branch
 - `reflog`: similar to `git reflog`. Without parameters, show HEAD reflog. Otherwise, show reflog for the branch
+- `cherry-pick`: similar to `git cherry-pick`
 
 ### Plumbing
 
