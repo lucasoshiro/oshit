@@ -63,4 +63,4 @@ docker run -v "[oshit path]:/oshit" -e OSHIT_AUTHOR=[author] -e OSHIT_EMAIL=[ema
 - `tree-from-index`: similar to `git write-tree`. Creates a tree based on the index contents.
 - `update-branch`: similar to `git update-ref`, but only for branches.
 - `update-head`: similar to `git update-ref HEAD`
-
+- `list-tree`: similar to `git ls-tree`
