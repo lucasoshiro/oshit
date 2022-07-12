@@ -64,3 +64,5 @@ docker run -v "[oshit path]:/oshit" -e OSHIT_AUTHOR=[author] -e OSHIT_EMAIL=[ema
 - `update-branch`: similar to `git update-ref`, but only for branches.
 - `update-head`: similar to `git update-ref HEAD`
 - `list-tree`: similar to `git ls-tree`
+- `merge-tree`: performs a three way merge using three trees, and returns the merged tree
+- `merge-commit`: performs a three way merge using three commits, and returns a merge commit
