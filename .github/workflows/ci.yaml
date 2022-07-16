@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  pull_request: {}
+  push:
+    branches: [ master ]
+
+jobs:
+  stack-build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout files in the repository
+        uses: actions/checkout@v3
+
+      - name: Setup Haskell & Stack
+        uses: haskell/actions/setup@v2
+        with:
+          enable-stack: true
+          stack-version: latest
+
+      - name: Build
+        run: stack build
