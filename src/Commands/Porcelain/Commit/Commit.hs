@@ -1,7 +1,5 @@
 module Commands.Porcelain.Commit.Commit where
 
-import Commands.Plumbing.Commit.CommitFromTree
-
 import Core.Core
 import Core.Index
 import Core.Object
@@ -20,8 +18,8 @@ cmdCommit _ = do
 
   -- Get commit metadata
   editor <- defaultEditor
-  author <- authorName
-  email  <- authorEmail
+  author' <- authorName
+  email'  <- authorEmail
   now    <- getZonedTime
 
   -- Edit commit message
@@ -39,18 +37,18 @@ cmdCommit _ = do
   sequence_ $ objsIOs
 
   -- Branch and parent
-  head <- getHead
-  if isLeft head then return () else fail "HEAD detached"
-  let branch = fromLeft "" head
+  head' <- getHead
+  if isLeft head' then return () else fail "HEAD detached"
+  let branch = fromLeft "" head'
   branchExists' <- branchExists branch
-  parents <- if branchExists'
+  parents' <- if branchExists'
     then getBranchCommitHash branch >>= \parent -> return [parent]
     else return []
 
   -- Store commit
-  let commit = Commit tree parents author email now msg
-  let hash = hashObject commit
-  sequence_ [storeObject commit, putStrLn $ B.unpack hash]
+  let commit = Commit tree parents' author' email' now msg
+  let hash' = hashObject commit
+  sequence_ [storeObject commit, putStrLn $ B.unpack hash']
 
   -- Update branch
-  updateBranch branch hash
+  updateBranch branch hash'

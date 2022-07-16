@@ -24,14 +24,10 @@ cmdReflog (ref:_) = do
 cmdReflog [] = cmdReflog ["HEAD"]
 
 prettyReflog :: Reflog -> String -> String
-prettyReflog reflog reference = intercalate "\n" $ prettyEntries
+prettyReflog reflog reference = intercalate "\n" prettyEntries
   where prettyEntries = zipWith prettyReflogEntry [0..] . reverse $ reflog 
 
         prettyReflogEntry :: Int -> ReflogEntry -> String
-        prettyReflogEntry index (
-          ReflogEntry
-            { newHash = newHash
-            , title   = title
-            }) = intercalate " " [colorize yellow shortHash, relative, title]
-          where shortHash = B.unpack . B.take 7 $ newHash
+        prettyReflogEntry index entry = unwords [colorize yellow shortHash, relative, title entry]
+          where shortHash = B.unpack . B.take 7 $ newHash entry
                 relative = reference ++ "@{" ++ show index ++ "}:"
