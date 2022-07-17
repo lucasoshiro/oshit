@@ -6,41 +6,54 @@ This is **not safe to use**, and if you use it in serious repositories you
 probably will say: "Oshit!". This is only meant for learning how git works and
 how hard it is.
 
-## Dependencies
+## Building from source
+
+This project can be built from source using GNU Make, Stack, or Cabal. When
+building with GNU Make, you'll have to manage Haskell dependencies on your own.
+The Makefile was written with Arch / Manjaro in mind, so dynamic linking is
+used, as haskell packages on those distros no longer ship archives for static
+linking.
+
+### Stack / Cabal
+
+With Stack installed, the build process is as simple as:
+
+```sh
+$ stack build
+```
+
+If you're using Cabal directly instead, make sure you have a compatible version
+of GHC installed and run the usual:
+
+```sh
+$ cabal build
+```
+
+Installing is possible with both through their `install` commands.
+
+### GNU Make
+
+As mentioned before, you're on your own here when it comes to managing
+dependencies. If you're on Arch or Manjaro, your mileage may vary, but these
+should prove sufficient:
 
 - `ghc`
 - `make`
-
-and the following haskell libs:
-
 - `haskell-zlib`
-- `cryptohash`
-- `base16-bytestring`
-- `unix-compat`
-- `split`
+- `haskell-cryptohash`
+- `haskell-base16-bytestring`
+- `haskell-unix-compat`
+- `haskell-split`
 
-### Installing dependencies on Arch/Manjaro
+Install them with the usual `sudo pacman -S`.
 
-~~~bash
-sudo pacman -S ghc make haskell-zlib haskell-cryptohash haskell-base16-bytestring haskell-unix-compat haskell-split
-~~~
+#### Notes on Debian and Ubuntu
 
-### Installing dependencies on Mac OS
-~~~
-brew install ghc cabal-install make
-cabal install zlib cryptohash base16-bytestring unix-compat split
-~~~
-
-### Notes on Debian and Ubuntu
 The oficial versions of the packages needed to build and run Oshit can be
 outdated! Be careful! Try to install them through other sources, such as cabal
 or stack!
 
 I'm providing here a Dockerfile based on Arch, if you prefer.
-
-## Compiling
-
-Just run `make` in the root.
 
 ## Running
 
