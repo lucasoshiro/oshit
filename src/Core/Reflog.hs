@@ -21,21 +21,21 @@ data ReflogEntry = ReflogEntry
 
 type Reflog = [ReflogEntry]
 
+instance Show ReflogEntry where
+  show entry = intercalate "\t"
+    [ unwords [ oldHash', newHash', author', timestamp' ]
+    , title entry
+    ]
+    where oldHash'   = B.unpack (oldHash entry)
+          newHash'   = B.unpack (newHash entry)
+          timestamp' = formatTime defaultTimeLocale gitTimeFormat (timestamp entry)
+          author'    = author entry ++ " " ++ "<" ++ email entry ++ ">"
+
+  showsPrec = const $ (++) . show
+  showList  = (++) . intercalate "\n" . map show
+
 reflogBasePath :: String
 reflogBasePath = ".git/logs/"
-
-reflogToString :: Reflog -> String
-reflogToString reflog = intercalate "\n" $ map reflogEntryToString reflog
-
-reflogEntryToString :: ReflogEntry -> String
-reflogEntryToString entry = intercalate "\t"
-  [ unwords [ oldHash', newHash', author', timestamp' ]
-  , title entry
-  ]
-  where oldHash'   = B.unpack (oldHash entry)
-        newHash'   = B.unpack (newHash entry)
-        timestamp' = formatTime defaultTimeLocale gitTimeFormat (timestamp entry)
-        author'    = author entry ++ " " ++ "<" ++ email entry ++ ">"
 
 parseReflog :: String -> Reflog
 parseReflog s = map parseReflogEntry . init $ splitOn "\n" s

@@ -17,7 +17,7 @@ spec :: Spec
 spec = do
   describe "ReflogEntry" $ do
     let reflogEntry = parseReflogEntry exampleReflogEntryStr
-        stringEntry = reflogEntryToString reflogEntry
+        stringEntry = show reflogEntry
 
     it "is properly read from string" $ do
       unpack (oldHash reflogEntry) `shouldBe` "9801739daae44ec5293d4e1f53d3f4d2d426d91c"
