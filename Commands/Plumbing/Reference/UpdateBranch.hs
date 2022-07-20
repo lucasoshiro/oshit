@@ -10,7 +10,8 @@ import Core.Reference
 cmdUpdateBranch :: Command
 cmdUpdateBranch (branch:hashStr:_) = do
   let hash = B.pack hashStr
-  hashExists <- objectExists hashStr
+  -- TODO: packfile
+  hashExists <- looseObjectExists hashStr
   if hashExists
     then updateBranch branch hash
     else fail "invalid hash"

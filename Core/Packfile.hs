@@ -137,3 +137,4 @@ searchInPackFiles hash = do
   return $ case found of
     [] -> Nothing
     p  -> Just . head $ p
+

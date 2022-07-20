@@ -8,7 +8,8 @@ import Core.Object
 
 cmdUpdateHead :: Command
 cmdUpdateHead (ref:_) = do
-  hashExists <- objectExists ref
+  -- TODO: packfile
+  hashExists <- looseObjectExists ref
   let hash = B.pack ref
   if hashExists
     then updateHead $ Right hash

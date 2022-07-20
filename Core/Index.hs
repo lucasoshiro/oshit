@@ -209,7 +209,8 @@ addFileToIndex path index = do
         , flags = flags
         }
 
-  (objectExists . B.unpack $ hash) >>= \e ->
+  -- TODO: packfile
+  (looseObjectExists . B.unpack $ hash) >>= \e ->
     if e
     then return ()
     else storeObject blob

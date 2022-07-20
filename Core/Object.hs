@@ -15,6 +15,7 @@ import qualified Data.Map                   as Map
 import qualified System.Directory           as Dir
 
 import Core.Core
+import Core.Packfile
 
 data ObjectType = BlobType | TreeType | CommitType
 
@@ -69,7 +70,8 @@ decompress = L.toStrict . Zlib.decompress . L.fromStrict
 storeObject :: Object obj => obj -> IO ()
 storeObject obj = do
   Dir.createDirectoryIfMissing True completeDir
-  exists <- objectExists hashStr
+  -- TODO: packfile
+  exists <- looseObjectExists hashStr
 
   if exists
     then return ()
@@ -86,8 +88,42 @@ storeObject obj = do
 loadObjectLegacy :: Object obj => Hash -> IO obj
 loadObjectLegacy hash = loadRawObject hash >>= objectParse
 
+loadLooseRawObject :: Hash -> IO B.ByteString
+loadLooseRawObject hash = B.readFile (hashPath hash) >>= return . decompress
+
+loadPackedRawObject :: Hash -> IO (Maybe B.ByteString)
+loadPackedRawObject hash = do
+  obj <- searchInPackFiles hash
+  return $ do
+    (objType, content) <- obj
+
+    typeStr <- case objType of
+                    PackBlob   -> Just . B.pack $ "blob"
+                    PackTree   -> Just . B.pack $ "tree"
+                    PackCommit -> Just . B.pack $ "commit"
+                    _          -> Nothing
+
+    let decompressed = decompress content
+        size = B.length decompressed
+
+    return . B.concat $ [ typeStr
+                        , B.pack " "
+                        , B.pack . show $ size
+                        , B.pack "\0"
+                        , decompressed
+                        ]
+
 loadRawObject :: Hash -> IO B.ByteString
-loadRawObject hash = B.readFile (hashPath hash) >>= return . decompress
+loadRawObject hash = do
+  exists <- looseObjectExists . B.unpack $ hash
+  if exists
+    then loadLooseRawObject $ hash
+    else do
+      packed <- loadPackedRawObject hash
+
+      case packed of
+        Just b -> return b
+        Nothing -> fail "object not found"
 
 loadObject :: Hash -> ObjectIO
 loadObject hash = ObjectIO blobIO treeIO commitIO
@@ -128,8 +164,8 @@ hashPath hash = path
         filename = drop 2 $ hashStr
         path     = concat [".git/objects/", dir, "/", filename]
 
-objectExists :: String -> IO Bool
-objectExists hashStr = do
+looseObjectExists :: String -> IO Bool
+looseObjectExists hashStr = do
   let path = ".git/objects/" ++ take 2 hashStr ++ "/" ++ drop 2 hashStr
   Dir.doesFileExist path
 
