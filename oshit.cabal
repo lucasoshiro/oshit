@@ -64,3 +64,20 @@ executable oshit
 
   default-language: Haskell2010
   ghc-options: -Wall -threaded -j
+
+test-suite spec
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+
+  hs-source-dirs: test
+
+  build-depends: base
+               , hspec
+               , oshit
+               , bytestring
+
+  other-modules:
+    Core.ReflogSpec
+
+  default-language: Haskell2010
+  ghc-options: -Wall
