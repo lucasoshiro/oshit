@@ -16,7 +16,7 @@ exampleReflogEntryStr =
 spec :: Spec
 spec = do
   describe "ReflogEntry" $ do
-    let reflogEntry = parseReflogEntry exampleReflogEntryStr
+    let reflogEntry = read exampleReflogEntryStr
         stringEntry = show reflogEntry
 
     it "is properly read from string" $ do
