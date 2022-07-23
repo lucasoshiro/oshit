@@ -7,7 +7,7 @@ on:
 
 jobs:
   stack-build:
-    name: Build
+    name: Build & Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout files in the repository
@@ -21,3 +21,6 @@ jobs:
 
       - name: Build
         run: stack build
+
+      - name: Test
+        run: stack test
