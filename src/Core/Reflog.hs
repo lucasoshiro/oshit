@@ -58,8 +58,7 @@ parseReflogEntry s = ReflogEntry
         parsedAuthorLine = drop 82 s' -- drop heading hashes and spaces
 
         parsedAuthor = init .
-                       takeWhile (/= '<') .
-                       drop 1 $
+                       takeWhile (/= '<') $
                        parsedAuthorLine
 
         parsedEmail = takeWhile (/= '>') .
