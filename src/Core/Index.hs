@@ -107,11 +107,11 @@ splitRawEntries bs = if B.length bs ==  0
 parseIndex :: B.ByteString -> Index
 parseIndex index =
   Map.fromList .
-  parseIndexEntries (fromIntegral size) .
+  parseIndexEntries (fromIntegral size') .
   splitRawEntries .
   (B.drop 12) $  -- skip header
   index
-  where size = Bin.decode . L.fromStrict . B.take 4 . B.drop 8 $ index :: Int32
+  where size' = Bin.decode . L.fromStrict . B.take 4 . B.drop 8 $ index :: Int32
 
 dumpIndex :: B.ByteString -> IO ()
 dumpIndex index = putStrLn . intercalate "\n" . map (B.unpack . B16.encode) $
@@ -129,72 +129,66 @@ readIndex = Dir.doesFileExist indexPath >>= \p -> if p
   else return Map.empty
 
 prettyIndex :: Index -> String
-prettyIndex index = intercalate "\n" .
-                    map (B.unpack . prettyEntry) .
-                    sortByPath .
-                    Map.toList $
-                    index
+prettyIndex = intercalate "\n" .
+              map (B.unpack . prettyEntry) .
+              sortByPath .
+              Map.toList
   where prettyEntry :: (B.ByteString, IndexEntry) -> B.ByteString
-        prettyEntry ( path
-                    , (IndexEntry
-                     { hash = hash
-                     , mode = mode
-                     })) = B.concat $
-                          [(B16.encode mode)
-                          , B.pack " "
-                          , (B16.encode hash)
-                          , B.pack " "
-                          , path
-                          ]
+        prettyEntry ( path, indexEntry ) = B.concat
+          [ B16.encode (mode indexEntry)
+          , B.pack " "
+          , B16.encode (hash indexEntry)
+          , B.pack " "
+          , path
+          ]
         sortByPath = sortBy (\a b -> compare (fst a) (fst b))
 
 showIndex :: Index -> IO ()
-showIndex index = putStrLn . prettyIndex $ index
+showIndex = putStrLn . prettyIndex
 
 unparseIndexEntry :: (B.ByteString, IndexEntry) -> B.ByteString
-unparseIndexEntry (path, (IndexEntry c m d i mode u g size hash flags)) =
+unparseIndexEntry (path, (IndexEntry c m d i md u g sz hsh fls)) =
   content `B.append` trailing
-  where content = B.concat [c, m, d, i, mode, u, g, size, hash, flags, path, B.pack "\0"]
+  where content = B.concat [c, m, d, i, md, u, g, sz, hsh, fls, path, B.pack "\0"]
         padding = (8 - (B.length content `mod` 8)) `mod` 8
-        trailing = B.pack . take padding . repeat $ '\0'
+        trailing = B.pack . replicate padding $ '\0'
 
 unparseIndex :: Index -> B.ByteString
-unparseIndex index = content `B.append` hash
-  where header = B.concat [dirc, version, size]
+unparseIndex index = content `B.append` hash'
+  where header = B.concat [dirc, version, size']
         dirc = B.pack "DIRC"
         version = B.pack . map chr $ [0, 0, 0, 2]
-        size = L.toStrict . Bin.encode $ (fromIntegral . length $ index :: Int32)
+        size' = L.toStrict . Bin.encode $ (fromIntegral . length $ index :: Int32)
         body = B.concat . map unparseIndexEntry . Map.toList $ index
         content = header `B.append` body
-        hash = SHA1.hash $ content
+        hash' = SHA1.hash content
 
 storeIndex :: Index -> IO ()
 storeIndex = B.writeFile indexPath . unparseIndex
 
 addBlobToIndex :: FilePath -> Hash -> Index -> Index
-addBlobToIndex path hash' index = Map.insert (B.pack path) entry index
-  where entry = emptyIndexEntry {hash = hash, flags = flags, mode = mode}
+addBlobToIndex path hsh = Map.insert (B.pack path) entry
+  where entry = emptyIndexEntry {hash = hash', flags = flags', mode = mode'}
         pathSize = length path
-        flags' :: Int16
-        flags' = if pathSize <= 0x0FFF
-                 then fromIntegral pathSize
-                 else 0x0FFF
-        flags = L.toStrict . Bin.encode $ flags'
-        hash = fromRight B.empty . B16.decode $ hash'
-        mode' = 100644 :: Int32
-        mode = L.toStrict . Bin.encode $ mode'
+        flags16 :: Int16
+        flags16 = if pathSize <= 0x0FFF
+                  then fromIntegral pathSize
+                  else 0x0FFF
+        flags' = L.toStrict . Bin.encode $ flags16
+        hash' = fromRight B.empty . B16.decode $ hsh
+        mode' = L.toStrict . Bin.encode $ (100644 :: Int32)
 
 addFileToIndex :: FilePath -> Index -> IO Index
 addFileToIndex path index = do
   status <- getFileStatus path
   content <- B.readFile path
   let blob = Blob content
-  let hash = hashObject blob
+  let hash' = hashObject blob
   let pathSize = length path
-  let flags' = (if pathSize <= 0x0FFF
-                then fromIntegral pathSize
-                else 0x0FFF) :: Int16
-  let flags = L.toStrict . Bin.encode $ flags'
+  let flags16 = (if pathSize <= 0x0FFF
+                 then fromIntegral pathSize
+                 else 0x0FFF) :: Int16
+  let flags' = L.toStrict . Bin.encode $ flags16
 
   let entry = IndexEntry
         { ctime = (\(CTime c) -> toBS64 c) $ statusChangeTime status
@@ -205,12 +199,12 @@ addFileToIndex path index = do
         , uid   = (\(CUid  c) -> toBS32 c) $ fileOwner        status
         , gid   = (\(CGid  c) -> toBS32 c) $ fileGroup        status
         , size  = (\(COff  c) -> toBS32 c) $ fileSize         status
-        , hash  = fromRight B.empty . B16.decode $ hash
-        , flags = flags
+        , hash  = fromRight B.empty . B16.decode $ hash'
+        , flags = flags'
         }
 
   -- TODO: packfile
-  (looseObjectExists . B.unpack $ hash) >>= \e ->
+  (looseObjectExists . B.unpack $ hash') >>= \e ->
     if e
     then return ()
     else storeObject blob
@@ -230,8 +224,8 @@ indexStatus = do
   workdirStatus <- sequence $ map getFileStatus workdir
 
   let index' = Map.fromList $
-               [ (B.unpack path', mtime)
-               | (path', IndexEntry {mtime = mtime}) <- Map.toList index
+               [ (B.unpack path', mtime indexEntry)
+               | (path', indexEntry) <- Map.toList index
                ]
 
 
@@ -262,8 +256,7 @@ indexStatus = do
             f <- touched
             [ do
                 wHash <- contentHash f
-                let iHash = (\(IndexEntry {hash = hash}) -> B16.encode hash) $
-                            (index Map.! (B.pack f))
+                let iHash = B16.encode . hash $ index Map.! B.pack f
                 if wHash == iHash
                   then return [f]
                   else return []
@@ -274,11 +267,11 @@ indexStatus = do
 
 treesFromIndex :: Index -> [Tree]
 treesFromIndex index = trees
-  where splittedIndex = [ (B16.encode hash, splitOn "/" . B.unpack $ path)
-                        | (path, (IndexEntry {hash = hash})) <- Map.toList index
+  where splittedIndex = [ (B16.encode (hash indexEntry), splitOn "/" . B.unpack $ path)
+                        | (path, indexEntry) <- Map.toList index
                         ]
-        files = [ (hash, init path, last path)
-                | (hash, path) <- splittedIndex
+        files = [ (hash', init path, last path)
+                | (hash', path) <- splittedIndex
                 ]
 
         filesystem = foldl insertToInnerTree (InnerTree "" Map.empty) files

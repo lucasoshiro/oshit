@@ -186,6 +186,7 @@ instance Object Blob where
 
 -- Commit
 
+gitTimeFormat :: String
 gitTimeFormat = "%s %z"
 
 instance Object Commit where
@@ -198,8 +199,8 @@ instance Object Commit where
 
     where objType      = rawObjectType raw
           content      = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
-          lines        = B.split '\n' content
-          headerLines  = takeWhile (/= B.empty) lines
+          linesB       = B.split '\n' content
+          headerLines  = takeWhile (/= B.empty) linesB
           treeLine     = headerLines !! 0
           parentsLines = (takeWhile $ B.isPrefixOf $ B.pack "parent") .
                          (drop 1) $
@@ -207,39 +208,39 @@ instance Object Commit where
           authorLine   = headerLines !! (length parentsLines + 1)
 
           tree       = B.drop (length "tree ") treeLine
-          parents    = [ B.drop (length "parent ") line
+          parents'   = [ B.drop (length "parent ") line
                        | line <- parentsLines
                        ]
-          author     = B.unpack .
+          author'    = B.unpack .
                        B.init .
                        B.takeWhile (/= '<') .
                        B.drop (length "author ") $
                        authorLine
-          email      = B.unpack .
+          email'     = B.unpack .
                        B.takeWhile (/= '>') .
                        B.drop 1 .
                        B.dropWhile (/= '<') $
                        authorLine
-          timestamp' :: Maybe ZonedTime
-          timestamp' = parseTimeM True defaultTimeLocale gitTimeFormat .
+          timestampM :: Maybe ZonedTime
+          timestampM = parseTimeM True defaultTimeLocale gitTimeFormat .
                        B.unpack .
                        B.drop 2 .
                        B.dropWhile (/= '>') $
                        authorLine
-          timestamp  = fromJust timestamp'
-          message    = B.unpack $
+          timestamp' = fromJust timestampM
+          message'   = B.unpack $
                        B.drop (1 + length headerLines + (sum $ map B.length headerLines)) $
                        content
-          commit = Commit tree parents author email timestamp message
+          commit = Commit tree parents' author' email' timestamp' message'
 
-  objectRawContent (Commit treeHash parents author email timestamp message) =
+  objectRawContent commit =
     B.pack . intercalate "\n" $
-    [tree'] ++  parents' ++ [author', commiter', "", message]
-    where tree'      = "tree" ++ " " ++ B.unpack treeHash
-          parents'   = ["parent" ++ " " ++ B.unpack parent | parent <- parents]
-          author'    = "author" ++ " " ++ author ++ " " ++ "<" ++ email ++ ">" ++ " " ++ timestamp'
-          commiter'  = "commiter" ++ " " ++ author ++ " " ++ "<" ++ email ++ ">" ++ " " ++ timestamp'
-          timestamp' = formatTime defaultTimeLocale gitTimeFormat timestamp
+    [tree'] ++  parents' ++ [author', commiter', "", message commit]
+    where tree'      = "tree" ++ " " ++ B.unpack (treeHash commit)
+          parents'   = ["parent" ++ " " ++ B.unpack parent | parent <- parents commit]
+          author'    = "author" ++ " " ++ author commit ++ " " ++ "<" ++ email commit ++ ">" ++ " " ++ timestamp'
+          commiter'  = "commiter" ++ " " ++ author commit ++ " " ++ "<" ++ email commit ++ ">" ++ " " ++ timestamp'
+          timestamp' = formatTime defaultTimeLocale gitTimeFormat (timestamp commit)
 
   objectPretty = B.unpack . objectRawContent
 

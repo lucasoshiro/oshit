@@ -6,3 +6,7 @@ oshit-debug
 tmp
 tags
 TAGS
+dist
+dist-newstyle
+.stack-work
+stack.yaml.lock

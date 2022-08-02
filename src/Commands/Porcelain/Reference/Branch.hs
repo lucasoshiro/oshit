@@ -12,8 +12,8 @@ cmdBranch :: Command
 
 -- No branch provided, show all branches:
 cmdBranch [] = do
-  head <- getHead
-  let currentBranch = fromLeft "" head
+  head' <- getHead
+  let currentBranch = fromLeft "" head'
   branches <- allBranches >>= return . map fst
 
   sequence_ $ do

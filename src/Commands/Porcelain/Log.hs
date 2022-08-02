@@ -31,13 +31,13 @@ cmdLog [] = do
   cmdLog [hash]
   
 prettyCommit :: Map.Map Hash [Branch] -> Hash -> Commit -> String
-prettyCommit branchMap hash (Commit _ _ author email timestamp message) =
+prettyCommit branchMap hash commit =
   colorize yellow ("commit " ++ B.unpack hash) ++ " " ++ branchesStr ++ "\n" ++
-  "Author: " ++ author ++ " <" ++ email ++ ">\n" ++
+  "Author: " ++ author commit ++ " <" ++ email commit ++ ">\n" ++
   "Date:   " ++ timestamp' ++ "\n" ++
   "\n" ++
-  intercalate "\n" ["    " ++ line | line <- lines message] ++ "\n"
-  where timestamp' = formatTime defaultTimeLocale logTimeFormat timestamp
+  intercalate "\n" ["    " ++ line | line <- lines $ message commit] ++ "\n"
+  where timestamp' = formatTime defaultTimeLocale logTimeFormat $ timestamp commit
         refBranches = if hash `Map.member` branchMap
                       then branchMap Map.! hash
                       else []

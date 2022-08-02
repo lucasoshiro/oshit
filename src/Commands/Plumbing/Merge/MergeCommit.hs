@@ -11,11 +11,10 @@ import qualified Data.ByteString.Char8      as B
 treeFromCommit :: Hash -> TreeIO
 treeFromCommit hash = do
   commit <- loadCommit hash
-  let (Commit {treeHash = treeHash}) = commit
-  loadTree treeHash
+  loadTree $ treeHash commit
 
 cmdMergeCommit :: Command
-cmdMergeCommit (o:a:b:author:email:_) = do
+cmdMergeCommit (o:a:b:au:em:_) = do
   let (hashO, hashA, hashB) = (B.pack o, B.pack a, B.pack b)
   let treeO = treeFromCommit hashO
   let treeA = treeFromCommit hashA
@@ -26,7 +25,7 @@ cmdMergeCommit (o:a:b:author:email:_) = do
   now <- getZonedTime
   msg <- getContents
 
-  let commit = Commit (hashObject merged) [hashA, hashB] author email now msg
+  let commit = Commit (hashObject merged) [hashA, hashB] au em now msg
   storeObject commit
   putStrLn $ B.unpack . hashObject $ commit
 

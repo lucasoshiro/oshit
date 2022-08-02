@@ -1,7 +1,6 @@
 module Commands.Plumbing.Reference.UpdateBranch where
 
 import qualified Data.ByteString.Char8      as B
-import qualified System.Directory           as Dir
 
 import Core.Core
 import Core.Object

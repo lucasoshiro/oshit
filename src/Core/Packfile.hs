@@ -39,8 +39,8 @@ parseIdxFile :: FilePath -> IO Idx
 parseIdxFile path = do
   idxFile <- B.readFile path
   
-  let (magic, notMagic) = B.splitAt 4 idxFile
-      (version, notVersion) = B.splitAt 4 notMagic
+  let (_, notMagic) = B.splitAt 4 idxFile
+      (_, notVersion) = B.splitAt 4 notMagic
       (fanOut, notFanOut) = B.splitAt (256 * 4) notVersion
   
       nObj :: Int32
@@ -50,11 +50,11 @@ parseIdxFile path = do
         $ fanOut
   
       (objNames, notObjNames) = B.splitAt (fromIntegral nObj * 20) notFanOut
-      (crc32, notCrc32) = B.splitAt (fromIntegral nObj * 4) notObjNames
-      (offsets, notOffsets) = B.splitAt (fromIntegral nObj * 4) notCrc32
+      (_, notCrc32) = B.splitAt (fromIntegral nObj * 4) notObjNames
+      (offsets, _) = B.splitAt (fromIntegral nObj * 4) notCrc32
       
       -- not implemented: packfiles >= 2 GB
-      (packChecksum, idxChecksum) = B.splitAt 20 notOffsets
+      -- (packChecksum, idxChecksum) = B.splitAt 20 notOffsets
 
       objs = extractChunks 20 objNames []
       offs = extractChunks 4 offsets []
@@ -68,10 +68,10 @@ parsePackFile :: FilePath -> IO B.ByteString
 parsePackFile path = do
   packFile <- B.readFile path
 
-  let (magic, notMagic) = B.splitAt 4 packFile
-      (version, notVersion) = B.splitAt 4 notMagic
-      (size, notSize) = B.splitAt 4 notVersion
-      (content, checksum) = B.splitAt (B.length notVersion - 20) notSize
+  let (_, notMagic) = B.splitAt 4 packFile
+      (_, notVersion) = B.splitAt 4 notMagic
+      (_, notSize) = B.splitAt 4 notVersion
+      (content, _) = B.splitAt (B.length notVersion - 20) notSize
   
   return content
 
@@ -87,11 +87,11 @@ extractNonDeltified dataStart = (objType, B.drop headerSize dataStart)
     header = getHeader dataStart
     objType = getPackObjType . (flip shift $ (-4)) . (0x70 .&. ) . ord . head $ header
     headerSize = length header
-    relevantData = (0xf .&. (ord . head $ header)) : [shift (ord d) 1 | d <- tail header]
-    enumerated = zip [0..] relevantData
-    shifted = [(shift d (i - 8), shift d i) | (i, d) <- enumerated]
-    joined = zipWith (\ a b -> (snd a) .|. (fst b)) shifted (tail shifted)
-    size = sum . map (\(a, b) -> a * 256 ^ b) $ zip joined [0..] 
+    -- relevantData = (0xf .&. (ord . head $ header)) : [shift (ord d) 1 | d <- tail header]
+    -- enumerated = zip [0..] relevantData
+    -- shifted = [(shift d (i - 8), shift d i) | (i, d) <- enumerated]
+    -- joined = zipWith (\ a b -> (snd a) .|. (fst b)) shifted (tail shifted)
+    -- size = sum . map (\(a, b) -> a * 256 ^ b) $ zip joined [0..] 
 
 getObjectData :: Idx -> B.ByteString -> Hash -> Maybe PackObj
 getObjectData idx packfile hash = do
