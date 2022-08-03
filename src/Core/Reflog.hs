@@ -39,12 +39,11 @@ instance Show ReflogEntry where
 
 instance Read ReflogEntry where
   readsPrec _ s = [(parsedEntry, "")]
-    where
-      metadata:t:_ = splitOn "\t" s
-      ohash:nhash:_    = map B.pack . take 2 . splitOn " " $ metadata
-      aut:mail:tsstr:_ = map trim . splitOneOf "<>" $ drop 82 metadata -- hashes and whitespace
-      tstamp = fromJust . parseTimeM True defaultTimeLocale gitTimeFormat $ tsstr
-      parsedEntry = ReflogEntry ohash nhash aut mail tstamp t
+    where metadata:t:_ = splitOn "\t" s
+          ohash:nhash:_    = map B.pack . take 2 . splitOn " " $ metadata
+          aut:mail:tsstr:_ = map trim . splitOneOf "<>" $ drop 82 metadata -- hashes and whitespace
+          tstamp = fromJust . parseTimeM True defaultTimeLocale gitTimeFormat $ tsstr
+          parsedEntry = ReflogEntry ohash nhash aut mail tstamp t
 
   readList = pure . (, "") . map read . filter (not . null) . splitOn "\n"
 
