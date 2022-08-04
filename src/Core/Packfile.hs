@@ -6,7 +6,6 @@ import Util.Util
 import Data.Bits
 import Data.Char
 import Data.Int
-import Numeric
 
 import qualified Data.Binary                as Bin
 import qualified Data.ByteString.Base16     as B16
@@ -106,8 +105,10 @@ extractNonDeltified dataStart = (objType, B.drop headerSize dataStart)
     -- size = sum . map (\(a, b) -> a * 256 ^ b) $ zip joined [0..] 
 
 getObjectData :: Idx -> B.ByteString -> Hash -> Maybe PackObj
-getObjectData idx packfile hash = do
-  offset <- Map.lookup hash idx
+getObjectData idx packfile hash = Map.lookup hash idx >>= getObjectInOffset packfile
+
+getObjectInOffset :: B.ByteString -> Int -> Maybe PackObj
+getObjectInOffset packfile offset = do
   let dataStart = B.drop (offset - 0xc) packfile
 
   let (objType', extracted) = extractNonDeltified $ dataStart
@@ -115,6 +116,7 @@ getObjectData idx packfile hash = do
 
   -- non-deltified only
   return (objType, extracted)
+  
 
 searchInPackFile :: Hash -> Hash -> IO (Maybe PackObj)
 searchInPackFile packHash objHash = do
