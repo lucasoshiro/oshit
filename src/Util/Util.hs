@@ -5,7 +5,8 @@ import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map                   as Map
 
-import Data.Char (isSpace)
+import Data.Bits
+import Data.Char (chr, isSpace, ord)
 import Data.Int
 import Data.List
 
@@ -60,3 +61,16 @@ zipMap m1 m2 = Map.mapWithKey (\k v1 -> (v1, m2 Map.! k)) m1
 
 parseOctal :: String -> Int
 parseOctal = read . ("0o" ++)
+
+byteToBoolList :: Char -> [Bool]
+byteToBoolList b = map (b' `testBit`) [0..7]
+  where b' = ord b
+
+boolListToByte :: [Bool] -> Char
+boolListToByte bs = chr $ foldl f 0 bs
+  where f a b = (if b then 0x80 else 0) + (a `shiftR` 1)
+
+groupsOf :: [a] -> Int -> [[a]]
+groupsOf l n = reverse $ map reverse $ foldl f [] l
+  where f ac@(a:as) b = if (length a < n) then (b:a):as else [b]:ac
+        f [] b = [[b]]

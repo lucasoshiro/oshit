@@ -1,10 +1,12 @@
 module Core.Packfile where
 
 import Core.Core
+import Util.Util
 
 import Data.Bits
 import Data.Char
 import Data.Int
+import Numeric
 
 import qualified Data.Binary                as Bin
 import qualified Data.ByteString.Base16     as B16
@@ -34,6 +36,16 @@ extractChunks n b ac =
   then ac
   else extractChunks n (B.drop n b) $ ac ++ [B.take n b]
 
+
+-- Not the best solution, as an elegant one is hard as hell to implement
+removeMSB :: B.ByteString -> B.ByteString
+removeMSB bs = B.pack $ map boolListToByte groups
+  where bools = map byteToBoolList $ B.unpack bs
+        ones = takeWhile last bools
+        useful = ones ++ [bools !! (length ones)]
+        inits = map init useful
+        flat = inits >>= reverse
+        groups = map reverse $ flat `groupsOf` 8
 
 parseIdxFile :: FilePath -> IO Idx
 parseIdxFile path = do
@@ -137,4 +149,3 @@ searchInPackFiles hash = do
   return $ case found of
     [] -> Nothing
     p  -> Just . head $ p
-
