@@ -9,6 +9,7 @@ import Commands.Plumbing.Merge.MergeCommit
 import Commands.Plumbing.Object.CreateBlob
 import Commands.Plumbing.Object.ListTree
 import Commands.Plumbing.Object.ShowObj
+import Commands.Plumbing.Packfile.VerifyPack
 import Commands.Plumbing.Reference.UpdateBranch
 import Commands.Plumbing.Reference.UpdateHead
 
@@ -42,6 +43,7 @@ runCmd "show-obj"         = cmdShowObj
 runCmd "tree-from-index"  = cmdTreeFromIndex
 runCmd "update-branch"    = cmdUpdateBranch
 runCmd "update-head"      = cmdUpdateHead
+runCmd "verify-pack"      = cmdVerifyPack
 runCmd _ = \_ -> fail "invalid command"
 
 main :: IO ()

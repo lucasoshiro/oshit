@@ -6,6 +6,7 @@ import Util.Util
 import Data.Bits
 import Data.Char
 import Data.Int
+import Data.Maybe
 
 import qualified Data.Binary                as Bin
 import qualified Data.ByteString.Base16     as B16
@@ -18,7 +19,7 @@ type Idx = Map.Map Hash Int
 
 data PackObjType = PackCommit | PackTree | PackBlob | PackTag | PackOfsDelta | PackRefDelta
 
-type PackObj = (PackObjType, B.ByteString)
+type PackObj = (PackObjType, Int, B.ByteString)
 
 getPackObjType :: Int -> Maybe PackObjType
 getPackObjType 1 = Just PackCommit
@@ -29,22 +30,32 @@ getPackObjType 5 = Just PackOfsDelta
 getPackObjType 6 = Just PackRefDelta
 getPackObjType _ = Nothing
 
+instance Show PackObjType where
+  show PackCommit   = "commit"
+  show PackTree     = "tree"
+  show PackBlob     = "blob"
+  show PackTag      = "tag"
+  show PackOfsDelta = "ofs"
+  show PackRefDelta = "ref"
+
 extractChunks :: Int -> B.ByteString -> [B.ByteString] -> [B.ByteString]
 extractChunks n b ac =
   if b == B.empty
   then ac
   else extractChunks n (B.drop n b) $ ac ++ [B.take n b]
 
-
 -- Not the best solution, as an elegant one is hard as hell to implement
-removeMSB :: B.ByteString -> B.ByteString
-removeMSB bs = B.pack $ map boolListToByte groups
+parseSize :: B.ByteString -> Int
+parseSize bs = foldl (\ac b -> ac * (2 ^ length b) + (ord . boolListToByte $ b)) 0 groups
   where bools = map byteToBoolList $ B.unpack bs
         ones = takeWhile last bools
-        useful = ones ++ [bools !! (length ones)]
+        useful = ones ++ [
+          bools !! (length ones)
+          ++ (take (length ones) . repeat $ False)
+          ]
         inits = map init useful
-        flat = inits >>= reverse
-        groups = map reverse $ flat `groupsOf` 8
+        flat = drop 3 $ inits >>= reverse -- 3 bits for type
+        groups = (reverse flat) `groupsOf` 8
 
 parseIdxFile :: FilePath -> IO Idx
 parseIdxFile path = do
@@ -86,8 +97,8 @@ parsePackFile path = do
   
   return content
 
-extractNonDeltified :: B.ByteString -> (Maybe PackObjType, B.ByteString)
-extractNonDeltified dataStart = (objType, B.drop headerSize dataStart)
+extractNonDeltified :: B.ByteString -> (Maybe PackObjType, Int, B.ByteString)
+extractNonDeltified dataStart = (objType, size, B.drop headerSize dataStart)
   where 
     firstBit :: Char -> Bool
     firstBit = (== 0x80) . (.&. 0x80) . ord
@@ -98,11 +109,8 @@ extractNonDeltified dataStart = (objType, B.drop headerSize dataStart)
     header = getHeader dataStart
     objType = getPackObjType . (flip shift $ (-4)) . (0x70 .&. ) . ord . head $ header
     headerSize = length header
-    -- relevantData = (0xf .&. (ord . head $ header)) : [shift (ord d) 1 | d <- tail header]
-    -- enumerated = zip [0..] relevantData
-    -- shifted = [(shift d (i - 8), shift d i) | (i, d) <- enumerated]
-    -- joined = zipWith (\ a b -> (snd a) .|. (fst b)) shifted (tail shifted)
-    -- size = sum . map (\(a, b) -> a * 256 ^ b) $ zip joined [0..] 
+    size = parseSize . B.pack $ header
+    
 
 getObjectData :: Idx -> B.ByteString -> Hash -> Maybe PackObj
 getObjectData idx packfile hash = Map.lookup hash idx >>= getObjectInOffset packfile
@@ -111,18 +119,23 @@ getObjectInOffset :: B.ByteString -> Int -> Maybe PackObj
 getObjectInOffset packfile offset = do
   let dataStart = B.drop (offset - 0xc) packfile
 
-  let (objType', extracted) = extractNonDeltified $ dataStart
+  let (objType', size, extracted) = extractNonDeltified $ dataStart
   objType <- objType'
 
   -- non-deltified only
-  return (objType, extracted)
+  return (objType, size, extracted)
   
+
+idxPath :: Hash -> String
+idxPath hash = concat [".git/objects/pack/pack-", B.unpack hash, ".idx"]
+  
+packPath :: Hash -> String
+packPath hash = concat [".git/objects/pack/pack-", B.unpack hash, ".pack"]
 
 searchInPackFile :: Hash -> Hash -> IO (Maybe PackObj)
 searchInPackFile packHash objHash = do
-  let packHashStr = B.unpack packHash
-      idxName = concat [".git/objects/pack/pack-", packHashStr, ".idx"]
-      packName = concat [".git/objects/pack/pack-", packHashStr, ".pack"]
+  let idxName = idxPath packHash
+      packName = packPath packHash
 
   idx <- parseIdxFile idxName
   pack <- parsePackFile packName
@@ -151,3 +164,14 @@ searchInPackFiles hash = do
   return $ case found of
     [] -> Nothing
     p  -> Just . head $ p
+
+verifyPack :: Hash -> IO [(Hash, PackObjType, Int)]
+verifyPack hash = do
+  let idxName = idxPath hash
+  idx <- parseIdxFile idxName
+
+  let objInfo h = d >>= \(t, s, _) -> return (h, t, s)
+        where d = searchInPackFiles h >>= return . fromJust
+      objHashes = Map.keys idx
+
+  sequence $ map objInfo objHashes

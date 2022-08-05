@@ -95,7 +95,7 @@ loadPackedRawObject :: Hash -> IO (Maybe B.ByteString)
 loadPackedRawObject hash = do
   obj <- searchInPackFiles hash
   return $ do
-    (objType, content) <- obj
+    (objType, _, content) <- obj
 
     typeStr <- case objType of
                     PackBlob   -> Just . B.pack $ "blob"

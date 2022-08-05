@@ -67,10 +67,10 @@ byteToBoolList b = map (b' `testBit`) [0..7]
   where b' = ord b
 
 boolListToByte :: [Bool] -> Char
-boolListToByte bs = chr $ foldl f 0 bs
+boolListToByte bs = chr $ foldl f 0 bs'
   where f a b = (if b then 0x80 else 0) + (a `shiftR` 1)
+        bs'   = bs ++ (take (8 - length bs) . repeat $ False)
 
 groupsOf :: [a] -> Int -> [[a]]
-groupsOf l n = reverse $ map reverse $ foldl f [] l
-  where f ac@(a:as) b = if (length a < n) then (b:a):as else [b]:ac
-        f [] b = [[b]]
+groupsOf [] _ = []
+groupsOf l n = (take n l) : groupsOf (drop n l) n
