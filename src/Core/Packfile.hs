@@ -2,6 +2,7 @@ module Core.Packfile where
 
 import Core.Core
 import Util.Util
+import Util.Compression
 
 import Data.Bits
 import Data.Char
@@ -97,33 +98,30 @@ parsePackFile path = do
   
   return content
 
-extractNonDeltified :: B.ByteString -> (Maybe PackObjType, Int, B.ByteString)
-extractNonDeltified dataStart = (objType, size, B.drop headerSize dataStart)
-  where 
-    firstBit :: Char -> Bool
-    firstBit = (== 0x80) . (.&. 0x80) . ord
-    getHeader :: B.ByteString -> String
-    getHeader b = if firstBit . B.head $ b
-                  then (B.head b) : (getHeader . B.tail $ b)
-                  else [B.head b]
-    header = getHeader dataStart
-    objType = getPackObjType . (flip shift $ (-4)) . (0x70 .&. ) . ord . head $ header
-    headerSize = length header
-    size = parseSize . B.pack $ header
-    
-
 getObjectData :: Idx -> B.ByteString -> Hash -> Maybe PackObj
 getObjectData idx packfile hash = Map.lookup hash idx >>= getObjectInOffset packfile
 
 getObjectInOffset :: B.ByteString -> Int -> Maybe PackObj
 getObjectInOffset packfile offset = do
-  let dataStart = B.drop (offset - 0xc) packfile
+  let firstBit :: Char -> Bool
+      firstBit = (== 0x80) . (.&. 0x80) . ord
+      
+      getHeader :: B.ByteString -> String
+      getHeader b = if firstBit . B.head $ b
+                    then (B.head b) : (getHeader . B.tail $ b)
+                    else [B.head b]
 
-  let (objType', size, extracted) = extractNonDeltified $ dataStart
+      dataStart = B.drop (offset - 0xc) packfile
+      header = getHeader dataStart
+      objType' = getPackObjType . (flip shift $ (-4)) . (0x70 .&. ) . ord . head $ header
+      headerSize = length header
+      size = parseSize . B.pack $ header
+      content = decompress $ B.drop headerSize dataStart
+
   objType <- objType'
 
   -- non-deltified only
-  return (objType, size, extracted)
+  return (objType, size, content)
   
 
 idxPath :: Hash -> String

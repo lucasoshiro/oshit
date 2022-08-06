@@ -6,16 +6,15 @@ import Data.List.Split
 import Data.Maybe
 import Data.Time
 
-import qualified Codec.Compression.Zlib     as Zlib
 import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Char8      as B
-import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map                   as Map
 import qualified System.Directory           as Dir
 
 import Core.Core
 import Core.Packfile
+import Util.Compression
 
 data ObjectType = BlobType | TreeType | CommitType
 
@@ -61,12 +60,6 @@ unparseObjectType CommitType = "commit"
 hashObject :: Object obj => obj -> Hash
 hashObject = B16.encode . SHA1.hash . objectFileContent
 
-compress :: B.ByteString -> B.ByteString
-compress = L.toStrict . Zlib.compress . L.fromStrict
-
-decompress :: B.ByteString -> B.ByteString
-decompress = L.toStrict . Zlib.decompress . L.fromStrict
-
 storeObject :: Object obj => obj -> IO ()
 storeObject obj = do
   Dir.createDirectoryIfMissing True completeDir
@@ -103,14 +96,13 @@ loadPackedRawObject hash = do
                     PackCommit -> Just . B.pack $ "commit"
                     _          -> Nothing
 
-    let decompressed = decompress content
-        size = B.length decompressed
+    let size = B.length content
 
     return . B.concat $ [ typeStr
                         , B.pack " "
                         , B.pack . show $ size
                         , B.pack "\0"
-                        , decompressed
+                        , content
                         ]
 
 loadRawObject :: Hash -> IO B.ByteString
