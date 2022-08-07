@@ -33,6 +33,7 @@ executable oshit
                , Core.Reference
                , Core.Reflog
                , Util.Colors
+               , Util.Compression
                , Util.Util
                , Commands.Plumbing.Commit.CommitFromTree
                , Commands.Plumbing.Index.AddBlob
