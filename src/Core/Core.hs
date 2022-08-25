@@ -8,7 +8,17 @@ import System.Environment
 type Command = [String] -> IO ()
 type Hash = B.ByteString
 
-data FileMode = StdMode | DirMode
+data FileMode = StdMode | DirMode deriving (Eq)
+
+instance Show FileMode where
+  show StdMode = "100644"
+  show DirMode = "40000"
+
+instance Read FileMode where
+  readsPrec _ = parsedModes . parseOctal
+    where parsedModes 0o100644 = [(StdMode, "")]
+          parsedModes 0o040000 = [(DirMode, "")]
+          parsedModes _ = []
 
 defaultEditor :: IO String
 defaultEditor = getEnv "EDITOR"
@@ -18,14 +28,3 @@ authorName = getEnv "OSHIT_AUTHOR"
 
 authorEmail :: IO String
 authorEmail = getEnv "OSHIT_EMAIL"
-
-fileModeFromString :: String -> Maybe FileMode
-fileModeFromString = fileModeFromString' . parseOctal
-  where fileModeFromString' :: Int -> Maybe FileMode
-        fileModeFromString' 0o100644 = Just StdMode
-        fileModeFromString' 0o040000 = Just DirMode
-        fileModeFromString' _        = Nothing
-
-stringFromFileMode :: FileMode -> String
-stringFromFileMode StdMode = "100644"
-stringFromFileMode DirMode = "40000"

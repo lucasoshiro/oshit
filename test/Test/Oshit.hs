@@ -23,6 +23,7 @@ import Data.Fixed (Pico)
 import Data.Time.Lens (modL, seconds)
 import Text.Printf (printf)
 
+import Core.Core (FileMode(..))
 import Core.Reflog (ReflogEntry(..))
 
 -- | Orphan instance of MonadFail for Test.QuickCheck.Gen, for pattern matching.
@@ -68,3 +69,7 @@ instance Arbitrary ReflogEntry where
                        , author = au, email = em
                        , timestamp = st, title = tt
                        }
+
+-- | Generate a random FileMode.
+instance Arbitrary FileMode where
+  arbitrary = elements [ StdMode, DirMode ]

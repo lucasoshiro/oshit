@@ -5,6 +5,7 @@ import Data.List
 import Data.List.Split
 import Data.Maybe
 import Data.Time
+import Text.Read (readMaybe)
 
 import qualified Codec.Compression.Zlib     as Zlib
 import qualified Crypto.Hash.SHA1           as SHA1
@@ -258,7 +259,7 @@ instance Object Tree where
     where objType = rawObjectType raw
 
   objectRawContent (Tree children) = B.concat $
-    [[ B.pack . stringFromFileMode $ mode, B.pack " "
+    [[ B.pack $ show mode, B.pack " "
      , B.pack name, B.pack "\0"
      , hash
      ]
@@ -268,7 +269,7 @@ instance Object Tree where
   objectPretty (Tree entries) = intercalate "\n" $
     [ let objType = case filemode of DirMode -> "tree"
                                      StdMode -> "blob"
-      in stringFromFileMode filemode
+      in show filemode
       ++ " "
       ++ objType
       ++ " "
@@ -339,7 +340,7 @@ parseTree raw = do
             let name = B.unpack name'
             let hash = B16.encode hash'
 
-            mode <- fileModeFromString . B.unpack $ mode'
+            mode <- readMaybe . B.unpack $ mode'
             restEntries <- getEntries rest
 
             return $ (mode, name, hash):restEntries
