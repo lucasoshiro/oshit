@@ -20,8 +20,9 @@ import Core.Packfile
 
 data ObjectType = BlobType | TreeType | CommitType
 
-data Tree = Tree [(FileMode, FilePath, Hash)]
-data Blob = Blob B.ByteString
+newtype Tree = Tree [(FileMode, FilePath, Hash)]
+newtype Blob = Blob B.ByteString
+
 data Commit = Commit
   { treeHash  :: Hash
   , parents   :: [Hash]
