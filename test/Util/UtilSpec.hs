@@ -4,8 +4,6 @@ import Test.Hspec
 import Test.Hspec.QuickCheck
 import Test.Oshit ()
 
-import Control.DeepSeq (force)
-import Control.Exception (evaluate)
 import Data.Char (isSpace)
 import Data.List.Index (indexed)
 import Data.Map hiding (take, drop, map)
@@ -25,17 +23,12 @@ spec = do
       parseOctal (unpack $ format oct (abs i)) `shouldBe` abs i
 
   describe "zipMap :: Ord k => Map k a -> Map k b -> Map k (a,b)" $ do
-    prop "zips maps with keys in common" $ \s -> do
+    prop "zips maps disregarding exclusive keys" $ \s -> do
       let mapA :: Map Int String
           mapA = fromList $ indexed s
-          mapC = zipMap mapA mapA
-      shouldSatisfy (keys mapC) . all $ uncurry (==) . (mapC !)
-
-    it "throws an ErrorCall when the 1st map has extra keys" $ do
-      let mapA, mapB :: Map Int Int
-          mapA = fromList [(1,  2), (2,  3), (3, 4)]
-          mapB = fromList [(1, 10), (2, 20)]
-      evaluate (force $ zipMap mapA mapB) `shouldThrow` anyErrorCall
+          mapB = fromList . indexed $ drop 1 s
+          mapC = zipMap mapA mapB
+      shouldSatisfy (keys mapC) . all $ \k -> mapC ! k == (mapA ! k, mapB ! k)
 
   describe "trim :: String -> String" $ do
     prop "strips whitespace on the ends of a string" $ \s -> do
