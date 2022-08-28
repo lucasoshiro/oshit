@@ -83,10 +83,17 @@ test-suite spec
     , bytestring
     , time
     , time-lens
+    , formatting
+    , text
+    , ilist == 0.4.0.1
+    , containers
+    , deepseq
+    , safe
 
   other-modules:
     Core.CoreSpec
     Core.ReflogSpec
+    Util.UtilSpec
     Test.Oshit
 
   default-language: Haskell2010

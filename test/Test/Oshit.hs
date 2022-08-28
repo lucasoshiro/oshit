@@ -17,7 +17,7 @@ import Test.QuickCheck.Instances.Time ()
 
 import qualified ASCII.Char as ASCII
 import ASCII.Lists
-import Data.ByteString.Char8 (pack)
+import Data.ByteString.Char8 (ByteString, pack)
 import Data.Char (chr)
 import Data.Fixed (Pico)
 import Data.Time.Lens (modL, seconds)
@@ -73,3 +73,7 @@ instance Arbitrary ReflogEntry where
 -- | Generate a random FileMode.
 instance Arbitrary FileMode where
   arbitrary = elements [ StdMode, DirMode ]
+
+-- | Generate a random ByteString from a random String.
+instance Arbitrary ByteString where
+  arbitrary = pack <$> arbitrary
