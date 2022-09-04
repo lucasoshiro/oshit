@@ -5,10 +5,10 @@ import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map                   as Map
 
+import Control.Monad (filterM, join)
 import Data.Char (isSpace)
 import Data.Int
 import Data.List
-
 import System.Directory
 
 invertMap :: Ord b => Map.Map a b -> Map.Map b [a]
@@ -42,18 +42,10 @@ toBS64 = toByteString . to64
 
 listDirectoryRecursive :: FilePath -> IO [FilePath]
 listDirectoryRecursive path = do
-  contents <- getDirectoryContents path >>= return . (\\ [".", "..", ".git"])
-  let x :: IO [[FilePath]]
-      x = sequence $ do
-        content <- contents
-        let childPath = path ++ "/" ++ content :: FilePath
-        return $ do
-          isDir <- doesDirectoryExist childPath
-          if isDir
-            then listDirectoryRecursive childPath >>= return . (childPath :)
-            else return [childPath] -- IO [FilePath]
-            
-  x >>= return . (>>= id)
+  contents <- map ((path ++ "/") ++) . delete ".git" <$> listDirectory path
+  directories <- filterM doesDirectoryExist contents
+  recursiveList <- join <$> mapM listDirectoryRecursive directories
+  return $ contents ++ recursiveList
 
 zipMap :: Ord k => Map.Map k a -> Map.Map k b -> Map.Map k (a, b)
 zipMap = Map.intersectionWith (,)
