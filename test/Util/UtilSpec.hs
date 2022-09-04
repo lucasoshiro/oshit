@@ -11,7 +11,7 @@ import Data.Map hiding (take, drop, map)
 import Data.Text.Lazy (unpack)
 import Formatting (format)
 import Formatting.Formatters (oct)
-import Safe (headMay, lastMay)
+import Safe (headMay, lastMay, initSafe)
 import System.Directory
 import System.IO.Temp (createTempDirectory)
 
@@ -47,6 +47,15 @@ spec = do
           slices = sliceByteString spans toBeSliced
           spans = map abs spans'
       map BS.length slices `shouldBe` spans
+      BS.concat slices `shouldBe` toBeSliced
+
+    prop "adds empty slices for insufficiently long bytestring" $ \spans' -> do
+      let toBeSliced = BS.pack $ replicate (sum $ initSafe spans) ' '
+          mismatches = dropWhile (\(s,sl) -> BS.length sl == s) $ zip spans slices
+          slices = sliceByteString spans toBeSliced
+          spans = map abs spans'
+      length slices `shouldSatisfy` flip elem [length spans', length spans' + 1]
+      mismatches `shouldSatisfy` all (\(_,sl) -> sl == BS.empty)
       BS.concat slices `shouldBe` toBeSliced
 
     prop "returns a singleton or nothing when given no spans" $ \bs -> do
