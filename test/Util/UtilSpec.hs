@@ -71,6 +71,11 @@ spec = do
       files <- listDirectoryRecursive "."
       sort files `shouldBe` sort ["./a", "./a/b", "./a/b/c", "./a/d", "./e"]
 
+    it "ignores .git directories" $ do
+      createDirectory ".git" >> createDirectory "a/.git"
+      files <- listDirectoryRecursive "."
+      sort files `shouldBe` sort ["./a", "./a/b", "./a/b/c", "./a/d", "./e"]
+
 withTempDirStructure :: IO () -> IO ()
 withTempDirStructure action = do
   current <- getCurrentDirectory
