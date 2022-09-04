@@ -20,10 +20,23 @@ trim :: String -> String
 trim = f . f
    where f = reverse . dropWhile isSpace
 
+-- | Divide a 'B.ByteString' into a list of 'B.ByteString' slices according to
+-- a list of spans / lengths. Each 'B.ByteString' in the resulting list will
+-- have length equal to the span that generated it. If the original string is
+-- longer than the sum of all spans, the remaining slice will be added to the
+-- end of the resulting slice list.
+--
+-- >>> sliceByteString [1, 2, 3] "abcdef"
+-- ["a","bc","def"]
+--
+-- >>> sliceByteString [1, 2] "abcdef"
+-- ["a","bc","def"]
+--
+-- >>> sliceByteString [1, 2, 3, 4] "abc"
+-- ["a","bc","",""]
 sliceByteString :: [Int] -> B.ByteString -> [B.ByteString]
-sliceByteString [] bs = if bs /= B.empty then [bs] else []
-sliceByteString (size:rest) bs = (B.take size bs) :
-                                 (sliceByteString rest $ B.drop size bs)
+sliceByteString [] bs = [ bs | bs /= B.empty ]
+sliceByteString (s:ss) bs = B.take s bs : sliceByteString ss (B.drop s bs)
 
 toByteString :: Bin.Binary b => b -> B.ByteString
 toByteString = L.toStrict . Bin.encode
