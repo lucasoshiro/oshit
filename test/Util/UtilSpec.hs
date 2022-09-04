@@ -66,18 +66,22 @@ spec = do
       let inverted = invertMap (m :: Map Int Int)
       shouldSatisfy inverted $ \inv -> all (\(a,b) -> a `elem` inv ! b) (toList m)
 
-  describe "listDirectoryRecursive :: FilePath -> IO [FilePath]" $ do
+  describe "listDirectoryRecursive :: FilePath -> IO [FilePath]" $ around_ withTempDirStructure $ do
     it "recursively lists directories" $ do
-      current <- getCurrentDirectory
-      tempDir <- createTempDirectory current "hspec-util-utilspec"
-
-      setCurrentDirectory tempDir -- work inside tmp directory
-      createDirectory "a" >> createDirectory "a/b"
-      writeFile "a/b/c" "" >> writeFile "a/d" ""
-      writeFile "e" ""
-
       files <- listDirectoryRecursive "."
       sort files `shouldBe` sort ["./a", "./a/b", "./a/b/c", "./a/d", "./e"]
 
-      setCurrentDirectory current
-      removeDirectoryRecursive tempDir
+withTempDirStructure :: IO () -> IO ()
+withTempDirStructure action = do
+  current <- getCurrentDirectory
+  tempDir <- createTempDirectory current "hspec-util-utilspec"
+
+  setCurrentDirectory tempDir -- work inside tmp directory
+  createDirectory "a" >> createDirectory "a/b"
+  writeFile "a/b/c" "" >> writeFile "a/d" ""
+  writeFile "e" ""
+
+  action
+
+  setCurrentDirectory current
+  removeDirectoryRecursive tempDir
