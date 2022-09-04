@@ -89,6 +89,8 @@ test-suite spec
     , containers
     , deepseq
     , safe
+    , directory
+    , temporary
 
   other-modules:
     Core.CoreSpec
