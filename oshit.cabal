@@ -91,9 +91,11 @@ test-suite spec
     , safe
     , directory
     , temporary
+    , filepath
 
   other-modules:
     Core.CoreSpec
+    Core.ObjectSpec
     Core.ReflogSpec
     Util.UtilSpec
     Test.Oshit
