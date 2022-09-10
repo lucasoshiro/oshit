@@ -1,11 +1,13 @@
 module Core.Object where
 
+import Control.Monad.Extra (unlessM)
 import Data.Either
 import Data.List
 import Data.List.Split
 import Data.Maybe
 import Data.Time
 import Text.Read (readMaybe)
+import System.FilePath (takeDirectory)
 
 import qualified Codec.Compression.Zlib     as Zlib
 import qualified Crypto.Hash.SHA1           as SHA1
@@ -69,23 +71,15 @@ compress = L.toStrict . Zlib.compress . L.fromStrict
 decompress :: B.ByteString -> B.ByteString
 decompress = L.toStrict . Zlib.decompress . L.fromStrict
 
-storeObject :: Object obj => obj -> IO ()
+-- | Stores a compressed Git object on disk.
+--
+-- TODO: Support packfiles.
+storeObject :: Object o => o -> IO ()
 storeObject obj = do
-  Dir.createDirectoryIfMissing True completeDir
-  -- TODO: packfile
-  exists <- looseObjectExists hashStr
-
-  if exists
-    then return ()
-    else B.writeFile path compressed
-
-  where hashStr      = B.unpack $ hashObject obj
-        dir          = take 2 $ hashStr
-        filename     = drop 2 $ hashStr
-        completeDir  = concat [".git/objects/", dir, "/"]
-        path         = completeDir ++ filename
-        uncompressed = objectFileContent obj
-        compressed   = compress uncompressed
+  let objectPath = hashPath $ hashObject obj
+  Dir.createDirectoryIfMissing True $ takeDirectory objectPath
+  unlessM (Dir.doesDirectoryExist objectPath) $ do
+    B.writeFile objectPath $ compress (objectFileContent obj)
 
 loadObjectLegacy :: Object obj => Hash -> IO obj
 loadObjectLegacy hash = loadRawObject hash >>= objectParse
