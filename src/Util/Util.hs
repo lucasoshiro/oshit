@@ -1,3 +1,13 @@
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Util.Util
+-- Copyright   :  (c) Lucas Oshiro 2022
+--
+-- Maintainer  : lucasseikioshiro@gmail.com
+--
+-- This module contains utility functions to be used elsewhere in this project.
+--------------------------------------------------------------------------------
+
 module Util.Util where
 
 import qualified Data.Binary                as Bin
