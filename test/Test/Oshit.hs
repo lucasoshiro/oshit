@@ -1,3 +1,5 @@
+{-# LANGUAGE StandaloneDeriving #-}
+
 module Test.Oshit where
 
 -- -----------------------------------------------------------------------------
@@ -25,6 +27,9 @@ import Text.Printf (printf)
 
 import Core.Core (FileMode(..))
 import Core.Reflog (ReflogEntry(..))
+import Core.Object (Blob(..))
+
+deriving instance Show Blob
 
 -- | Orphan instance of MonadFail for Test.QuickCheck.Gen, for pattern matching.
 instance MonadFail Gen where
@@ -77,3 +82,7 @@ instance Arbitrary FileMode where
 -- | Generate a random ByteString from a random String.
 instance Arbitrary ByteString where
   arbitrary = pack <$> arbitrary
+
+-- | Generate a random Blob.
+instance Arbitrary Blob where
+  arbitrary = Blob <$> arbitrary

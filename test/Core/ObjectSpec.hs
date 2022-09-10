@@ -30,6 +30,12 @@ spec = do
     prop "returns False if the object does not exist" $ forAll sha1Gen $ \hash -> do
       looseObjectExists hash `shouldReturn` False
 
+  describe "storeObject :: Object o => o -> IO ()" $ around_ withTempDir $ do
+    prop "stores blobs in the .git directory" $ \blob -> do
+      let blobPath = hashPath $ hashObject (blob :: Blob)
+      storeObject blob
+      doesFileExist blobPath `shouldReturn` True
+
 withTempDir :: IO () -> IO ()
 withTempDir action = do
   current <- getCurrentDirectory
