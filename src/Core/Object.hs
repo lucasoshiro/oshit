@@ -159,6 +159,10 @@ objectFileContent obj = uncompressed
 rawObjectType :: B.ByteString -> Maybe ObjectType
 rawObjectType = parseObjectType . B.unpack . (B.takeWhile (/= ' '))
 
+-- | Returns the path to the object file given its hash.
+--
+-- >>> hashPath "aabbccddeeff"
+-- ".git/objects/aa/bbccddeeff"
 hashPath :: Hash -> FilePath
 hashPath hash = path
   where hashStr  = B.unpack hash
@@ -166,6 +170,7 @@ hashPath hash = path
         filename = drop 2 $ hashStr
         path     = concat [".git/objects/", dir, "/", filename]
 
+-- | Determines if a loose object file exists given its hash as a string.
 looseObjectExists :: String -> IO Bool
 looseObjectExists hashStr = do
   let path = ".git/objects/" ++ take 2 hashStr ++ "/" ++ drop 2 hashStr
