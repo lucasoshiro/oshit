@@ -164,17 +164,12 @@ rawObjectType = parseObjectType . B.unpack . (B.takeWhile (/= ' '))
 -- >>> hashPath "aabbccddeeff"
 -- ".git/objects/aa/bbccddeeff"
 hashPath :: Hash -> FilePath
-hashPath hash = path
-  where hashStr  = B.unpack hash
-        dir      = take 2 $ hashStr
-        filename = drop 2 $ hashStr
-        path     = concat [".git/objects/", dir, "/", filename]
+hashPath hash = concat [".git/objects/", dir, "/", filename]
+  where (dir, filename) = splitAt 2 $ B.unpack hash
 
 -- | Determines if a loose object file exists given its hash as a string.
 looseObjectExists :: String -> IO Bool
-looseObjectExists hashStr = do
-  let path = ".git/objects/" ++ take 2 hashStr ++ "/" ++ drop 2 hashStr
-  Dir.doesFileExist path
+looseObjectExists = Dir.doesFileExist . hashPath . B.pack
 
 -- Blob
 
