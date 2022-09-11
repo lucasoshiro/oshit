@@ -1,3 +1,14 @@
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Core.Object
+-- Copyright   :  (c) Lucas Oshiro 2022
+--
+-- Maintainer  : lucasseikioshiro@gmail.com
+--
+-- This module contains the definitions of the 'Object' typeclass as well as
+-- Git objects such as 'Tree', 'Commit' and 'Blob'.
+--------------------------------------------------------------------------------
+
 module Core.Object where
 
 import Control.Monad.Extra (unlessM)
@@ -20,6 +31,7 @@ import qualified System.Directory           as Dir
 import Core.Core
 import Core.Packfile
 
+-- | Helper type to enumerate valid Git object types.
 data ObjectType = BlobType | TreeType | CommitType
 
 newtype Tree = Tree [(FileMode, FilePath, Hash)]
@@ -34,10 +46,15 @@ data Commit = Commit
   , message   :: String
   }
 
+-- | Typeclass for Git objects.
 class Object obj where
+  -- | Returns the object type.
   objectType       :: obj -> ObjectType
+  -- | Parse a 'B.ByteString' into an object of the given type.
   objectParse      :: B.ByteString -> IO obj
+  -- | Serialize the object into a 'B.ByteString'.
   objectRawContent :: obj -> B.ByteString
+  -- | Pretty print the object.
   objectPretty     :: obj -> String
 
 type BlobIO   = IO Blob
@@ -62,12 +79,15 @@ instance Show ObjectType where
   show TreeType   = "tree"
   show CommitType = "commit"
 
+-- | Compute the SHA1 hash of an object.
 hashObject :: Object obj => obj -> Hash
 hashObject = B16.encode . SHA1.hash . objectFileContent
 
+-- | Compresses a 'B.ByteString' using zlib.
 compress :: B.ByteString -> B.ByteString
 compress = L.toStrict . Zlib.compress . L.fromStrict
 
+-- | Decompresses a 'B.ByteString' using zlib.
 decompress :: B.ByteString -> B.ByteString
 decompress = L.toStrict . Zlib.decompress . L.fromStrict
 
@@ -81,12 +101,15 @@ storeObject obj = do
   unlessM (Dir.doesDirectoryExist objectPath) $ do
     B.writeFile objectPath $ compress (objectFileContent obj)
 
+-- | Loads a Git object from disk and attempts to parse it.
 loadObjectLegacy :: Object obj => Hash -> IO obj
 loadObjectLegacy hash = loadRawObject hash >>= objectParse
 
+-- | Loads a loose Git object from disk as a 'B.ByteString'.
 loadLooseRawObject :: Hash -> IO B.ByteString
 loadLooseRawObject hash = B.readFile (hashPath hash) >>= return . decompress
 
+-- | Loads a packed Git object from disk as a 'Maybe'@ @'B.ByteString'.
 loadPackedRawObject :: Hash -> IO (Maybe B.ByteString)
 loadPackedRawObject hash = do
   obj <- searchInPackFiles hash
@@ -109,6 +132,7 @@ loadPackedRawObject hash = do
                         , decompressed
                         ]
 
+-- | Loads a Git object from disk (either loose or packed) as a 'B.ByteString'.
 loadRawObject :: Hash -> IO B.ByteString
 loadRawObject hash = do
   exists <- looseObjectExists . B.unpack $ hash
@@ -121,6 +145,7 @@ loadRawObject hash = do
         Just b -> return b
         Nothing -> fail "object not found"
 
+-- | Loads a Git object from disk as an 'ObjectIO'.
 loadObject :: Hash -> ObjectIO
 loadObject hash = ObjectIO blobIO treeIO commitIO
   where raw      = loadRawObject hash
@@ -128,18 +153,22 @@ loadObject hash = ObjectIO blobIO treeIO commitIO
         treeIO   = raw >>= objectParse
         commitIO = raw >>= objectParse
 
+-- | Loads a Git blob from disk.
 loadBlob :: Hash -> BlobIO
 loadBlob hash = blobIO
   where (ObjectIO blobIO _ _) = loadObject hash
-        
+
+-- | Loads a Git tree from disk.
 loadTree :: Hash -> TreeIO
 loadTree hash = treeIO
   where (ObjectIO _ treeIO _) = loadObject hash
 
+-- | Loads a Git commit from disk.
 loadCommit :: Hash -> CommitIO
 loadCommit hash = commitIO
   where (ObjectIO _ _ commitIO) = loadObject hash
 
+-- | Get the uncompressed contents of an object as a 'B.ByteString'.
 objectFileContent :: Object obj => obj -> B.ByteString
 objectFileContent obj = uncompressed
   where content      = objectRawContent obj
@@ -150,6 +179,7 @@ objectFileContent obj = uncompressed
                                 , size
                                 , B.pack "\0", content]
 
+-- | Tries to parse the type of a Git object from its uncompressed contents.
 rawObjectType :: B.ByteString -> Maybe ObjectType
 rawObjectType = readMaybe . B.unpack . B.takeWhile (/= ' ')
 
