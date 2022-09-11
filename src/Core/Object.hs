@@ -51,16 +51,16 @@ data InnerTreeNode = InnerLeaf Hash
 
 data HashedInnerTree = HashedInnerTree (Hash, Tree, [HashedInnerTree])
 
-parseObjectType :: String -> Maybe ObjectType
-parseObjectType "blob"   = Just BlobType
-parseObjectType "tree"   = Just TreeType
-parseObjectType "commit" = Just CommitType
-parseObjectType _        = Nothing
+instance Read ObjectType where
+  readsPrec _ "blob"   = [(BlobType,   "")]
+  readsPrec _ "tree"   = [(TreeType,   "")]
+  readsPrec _ "commit" = [(CommitType, "")]
+  readsPrec _ _        = []
 
-unparseObjectType :: ObjectType -> String
-unparseObjectType BlobType   = "blob"
-unparseObjectType TreeType   = "tree"
-unparseObjectType CommitType = "commit"
+instance Show ObjectType where
+  show BlobType   = "blob"
+  show TreeType   = "tree"
+  show CommitType = "commit"
 
 hashObject :: Object obj => obj -> Hash
 hashObject = B16.encode . SHA1.hash . objectFileContent
@@ -145,13 +145,13 @@ objectFileContent obj = uncompressed
   where content      = objectRawContent obj
         size         = B.pack $ show $ B.length content
         objType      = objectType obj
-        uncompressed = B.concat [ B.pack . unparseObjectType $ objType
+        uncompressed = B.concat [ B.pack $ show objType
                                 , B.pack " "
                                 , size
                                 , B.pack "\0", content]
 
 rawObjectType :: B.ByteString -> Maybe ObjectType
-rawObjectType = parseObjectType . B.unpack . (B.takeWhile (/= ' '))
+rawObjectType = readMaybe . B.unpack . B.takeWhile (/= ' ')
 
 -- | Returns the path to the object file given its hash.
 --
