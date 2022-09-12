@@ -10,6 +10,7 @@
 
 module Util.Util where
 
+import qualified Codec.Compression.Zlib     as Zlib
 import qualified Data.Binary                as Bin
 import qualified Data.ByteString.Char8      as B
 import qualified Data.ByteString.Lazy.Char8 as L
@@ -98,3 +99,11 @@ zipMap = Map.intersectionWith (,)
 -- | Read a octal number written as a 'String' into an 'Int'.
 parseOctal :: String -> Int
 parseOctal = read . ("0o" ++)
+
+-- | Compresses a 'B.ByteString' using zlib.
+compress :: B.ByteString -> B.ByteString
+compress = L.toStrict . Zlib.compress . L.fromStrict
+
+-- | Decompresses a 'B.ByteString' using zlib.
+decompress :: B.ByteString -> B.ByteString
+decompress = L.toStrict . Zlib.decompress . L.fromStrict

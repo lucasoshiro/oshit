@@ -1,5 +1,3 @@
-{-# LANGUAGE StandaloneDeriving #-}
-
 module Test.Oshit where
 
 -- -----------------------------------------------------------------------------
@@ -28,8 +26,6 @@ import Text.Printf (printf)
 import Core.Core (FileMode(..))
 import Core.Reflog (ReflogEntry(..))
 import Core.Object (Blob(..))
-
-deriving instance Show Blob
 
 -- | Orphan instance of MonadFail for Test.QuickCheck.Gen, for pattern matching.
 instance MonadFail Gen where

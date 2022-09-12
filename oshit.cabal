@@ -57,6 +57,12 @@ library
     Commands.Porcelain.Reference.Branch
     Commands.Porcelain.Reflog
 
+  other-modules:
+    Core.Object.Core
+    Core.Object.Blob
+    Core.Object.Commit
+    Core.Object.Tree
+
 executable oshit
   main-is: Main.hs
   hs-source-dirs: app
