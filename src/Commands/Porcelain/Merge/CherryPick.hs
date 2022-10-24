@@ -18,23 +18,23 @@ cmdCherryPick (hash:_) = do
         (Right _)      -> fail "Cannot cherry-pick in detached HEAD"
 
   headCommitHash <- getHeadCommitHash
-  headCommit <- loadCommit headCommitHash
+  headCommit <- loadObject headCommitHash
   let Commit {treeHash = headTreeHash} = headCommit
-  let headTree = loadTree headTreeHash
+  let headTree = loadObject headTreeHash
 
-  cherryPickCommit <- loadCommit . B.pack $ hash
+  cherryPickCommit <- loadObject . B.pack $ hash
   let Commit { parents = cherryPickParents
              , treeHash = cherryPickTreeHash
              } = cherryPickCommit
-  let cherryPickTree = loadTree cherryPickTreeHash
+  let cherryPickTree = loadObject cherryPickTreeHash
 
   parentCommitHash <-
     if cherryPickParents /= []
     then return . head $ cherryPickParents
     else fail "Cannot cherry-pick initial commit!"
-  parentCommit <- loadCommit parentCommitHash
+  parentCommit <- loadObject parentCommitHash
   let Commit {treeHash = parentTreeHash} = parentCommit
-  let parentTree = loadTree parentTreeHash
+  let parentTree = loadObject parentTreeHash
 
   mergedTree <- mergeTree parentTree cherryPickTree headTree
   let mergedHash = hashObject mergedTree

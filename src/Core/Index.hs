@@ -289,7 +289,7 @@ indexFromTree' path ((entryMode, name, entryHash):rest) =
     let rawFullPath = intercalate "/" fullPath
 
     let subIndex = case entryMode of
-          DirMode -> loadObjectLegacy entryHash >>= \(Tree entries) -> indexFromTree' fullPath entries
+          DirMode -> loadObject entryHash >>= \(Tree entries) -> indexFromTree' fullPath entries
           StdMode -> return $ addBlobToIndex rawFullPath entryHash Map.empty
 
     it <- subIndex
