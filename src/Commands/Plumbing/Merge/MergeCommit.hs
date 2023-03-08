@@ -10,7 +10,7 @@ import qualified Data.ByteString.Char8      as B
 
 treeFromCommit :: Hash -> IO Tree
 treeFromCommit hash = do
-  commit <- loadObject hash :: IO Commit
+  commit <- loadObject hash
   loadObject $ treeHash commit
 
 cmdMergeCommit :: Command
