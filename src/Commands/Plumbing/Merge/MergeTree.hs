@@ -8,10 +8,8 @@ import qualified Data.ByteString.Char8      as B
 
 cmdMergeTree :: Command
 cmdMergeTree (o:a:b:_) = do
-  let (hashO, hashA, hashB) = (B.pack o, B.pack a, B.pack b)
-  let treeO = loadObject hashO
-  let treeA = loadObject hashA
-  let treeB = loadObject hashB
+  let (treeO, treeA, treeB) = (hashToTree o, hashToTree a, hashToTree b)
+      hashToTree = loadObject . B.pack
 
   merged <- mergeTree treeO treeA treeB
   putStrLn $ B.unpack . hashObject $ merged
