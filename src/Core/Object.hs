@@ -36,12 +36,6 @@ class Object obj where
   objectRawContent :: obj -> B.ByteString
   objectPretty     :: obj -> String
 
-type BlobIO   = IO Blob
-type TreeIO   = IO Tree
-type CommitIO = IO Commit
-
-data ObjectIO = ObjectIO BlobIO TreeIO CommitIO
-
 data InnerTreeNode = InnerLeaf Hash
                    | InnerTree FilePath (Map.Map FilePath InnerTreeNode)
 
@@ -85,9 +79,6 @@ storeObject obj = do
         uncompressed = objectFileContent obj
         compressed   = compress uncompressed
 
-loadObjectLegacy :: Object obj => Hash -> IO obj
-loadObjectLegacy hash = loadRawObject hash >>= objectParse
-
 loadLooseRawObject :: Hash -> IO B.ByteString
 loadLooseRawObject hash = B.readFile (hashPath hash) >>= return . decompress
 
@@ -125,24 +116,9 @@ loadRawObject hash = do
         Just b -> return b
         Nothing -> fail "object not found"
 
-loadObject :: Hash -> ObjectIO
-loadObject hash = ObjectIO blobIO treeIO commitIO
+loadObject :: Object o => Hash -> IO o
+loadObject hash = raw >>= objectParse
   where raw      = loadRawObject hash
-        blobIO   = raw >>= objectParse
-        treeIO   = raw >>= objectParse
-        commitIO = raw >>= objectParse
-
-loadBlob :: Hash -> BlobIO
-loadBlob hash = blobIO
-  where (ObjectIO blobIO _ _) = loadObject hash
-        
-loadTree :: Hash -> TreeIO
-loadTree hash = treeIO
-  where (ObjectIO _ treeIO _) = loadObject hash
-
-loadCommit :: Hash -> CommitIO
-loadCommit hash = commitIO
-  where (ObjectIO _ _ commitIO) = loadObject hash
 
 objectFileContent :: Object obj => obj -> B.ByteString
 objectFileContent obj = uncompressed
@@ -347,7 +323,7 @@ parseTree raw = do
   entries <- getEntries content
   return . Tree $ entries
 
-treeContentsRecursive :: TreeIO -> IO [(FileMode, FilePath, Hash)]
+treeContentsRecursive :: IO Tree -> IO [(FileMode, FilePath, Hash)]
 treeContentsRecursive = (>>= \(Tree entries) -> treeContentsRecursive' [] entries)
 
 treeContentsRecursive' :: [String] -> [(FileMode, FilePath, Hash)] -> IO [(FileMode, FilePath, Hash)]
@@ -358,19 +334,19 @@ treeContentsRecursive' path ((entryMode, name, entryHash):rest) =
     let rawFullPath = intercalate "/" fullPath
 
     let subList = case entryMode of
-          DirMode -> loadTree entryHash >>= \(Tree entries) -> treeContentsRecursive' fullPath entries
+          DirMode -> loadObject entryHash >>= \(Tree entries) -> treeContentsRecursive' fullPath entries
           StdMode -> return $ [(StdMode, rawFullPath, entryHash)]
 
     it <- subList
     r <- treeContentsRecursive' path rest
     return $ it ++ r
 
-listTreeRecursive :: TreeIO -> IO [FilePath]
+listTreeRecursive :: IO Tree -> IO [FilePath]
 listTreeRecursive treeIO = do
   contents <- treeContentsRecursive treeIO
   return [path | (_, path, _) <- contents]
 
-treesFromContents :: [(FileMode, FilePath, Hash)] -> [TreeIO]
+treesFromContents :: [(FileMode, FilePath, Hash)] -> [IO Tree]
 treesFromContents contents = [storeObject tree >> return tree | tree <- trees]
   where splittedIndex = [ (hash, splitOn "/" path)
                         | (_, path, hash) <- contents

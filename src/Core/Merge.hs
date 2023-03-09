@@ -19,7 +19,7 @@ threeWayMerge o a b
   | b == o = Just a
   | otherwise = Nothing
 
-mergeTree :: TreeIO -> TreeIO -> TreeIO -> TreeIO
+mergeTree :: IO Tree -> IO Tree -> IO Tree -> IO Tree
 mergeTree o a b = do
   -- Just handling content merge. File permission and submodule merge not
   -- implemented yet. We're not detecting renames. By now we're just giving

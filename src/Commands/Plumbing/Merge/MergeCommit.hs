@@ -8,10 +8,8 @@ import Data.Time
 
 import qualified Data.ByteString.Char8      as B
 
-treeFromCommit :: Hash -> TreeIO
-treeFromCommit hash = do
-  commit <- loadCommit hash
-  loadTree $ treeHash commit
+treeFromCommit :: Hash -> IO Tree
+treeFromCommit h = loadObject h >>= loadObject . treeHash
 
 cmdMergeCommit :: Command
 cmdMergeCommit (o:a:b:au:em:_) = do
