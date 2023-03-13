@@ -17,13 +17,15 @@ import Test.QuickCheck.Instances.Time ()
 
 import qualified ASCII.Char as ASCII
 import ASCII.Lists
-import Data.ByteString.Char8 (pack)
+import Data.ByteString.Char8 (ByteString, pack)
 import Data.Char (chr)
 import Data.Fixed (Pico)
 import Data.Time.Lens (modL, seconds)
 import Text.Printf (printf)
 
+import Core.Core (FileMode(..))
 import Core.Reflog (ReflogEntry(..))
+import Core.Object (Blob(..))
 
 -- | Orphan instance of MonadFail for Test.QuickCheck.Gen, for pattern matching.
 instance MonadFail Gen where
@@ -68,3 +70,15 @@ instance Arbitrary ReflogEntry where
                        , author = au, email = em
                        , timestamp = st, title = tt
                        }
+
+-- | Generate a random FileMode.
+instance Arbitrary FileMode where
+  arbitrary = elements [ StdMode, DirMode ]
+
+-- | Generate a random ByteString from a random String.
+instance Arbitrary ByteString where
+  arbitrary = pack <$> arbitrary
+
+-- | Generate a random Blob.
+instance Arbitrary Blob where
+  arbitrary = Blob <$> arbitrary

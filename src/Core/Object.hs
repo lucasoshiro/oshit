@@ -1,258 +1,57 @@
-module Core.Object where
+--------------------------------------------------------------------------------
+-- |
+-- Module      :  Core.Object
+-- Copyright   :  (c) Lucas Oshiro 2022
+--
+-- Maintainer  : lucasseikioshiro@gmail.com
+--
+-- This module exports the definitions of Git objects.
+--------------------------------------------------------------------------------
+
+module Core.Object (
+    module Core.Object.Core,
+    module Core.Object.Tree,
+    module Core.Object.Commit,
+    module Core.Object.Blob,
+
+    loadObject,
+
+    -- temporary
+    Tree(..),
+    listTreeRecursive,
+    treeContentsRecursive,
+    treesFromContents,
+    insertToInnerTree,
+    InnerTreeNode(..),
+    treesFromInnerTrees
+  ) where
+
+import Core.Object.Core
+import Core.Object.Blob
+import Core.Object.Commit
+import Core.Object.Tree
 
 import Data.Either
 import Data.List
 import Data.List.Split
-import Data.Maybe
-import Data.Time
 
-import qualified Codec.Compression.Zlib     as Zlib
-import qualified Crypto.Hash.SHA1           as SHA1
 import qualified Data.ByteString.Base16     as B16
 import qualified Data.ByteString.Char8      as B
-import qualified Data.ByteString.Lazy.Char8 as L
 import qualified Data.Map                   as Map
-import qualified System.Directory           as Dir
 
 import Core.Core
-import Core.Packfile
-
-data ObjectType = BlobType | TreeType | CommitType
-
-data Tree = Tree [(FileMode, FilePath, Hash)]
-data Blob = Blob B.ByteString
-data Commit = Commit
-  { treeHash  :: Hash
-  , parents   :: [Hash]
-  , author    :: String
-  , email     :: String
-  , timestamp :: ZonedTime
-  , message   :: String
-  }
-
-class Object obj where
-  objectType       :: obj -> ObjectType
-  objectParse      :: B.ByteString -> IO obj
-  objectRawContent :: obj -> B.ByteString
-  objectPretty     :: obj -> String
 
 data InnerTreeNode = InnerLeaf Hash
                    | InnerTree FilePath (Map.Map FilePath InnerTreeNode)
 
 data HashedInnerTree = HashedInnerTree (Hash, Tree, [HashedInnerTree])
 
-parseObjectType :: String -> Maybe ObjectType
-parseObjectType "blob"   = Just BlobType
-parseObjectType "tree"   = Just TreeType
-parseObjectType "commit" = Just CommitType
-parseObjectType _        = Nothing
-
-unparseObjectType :: ObjectType -> String
-unparseObjectType BlobType   = "blob"
-unparseObjectType TreeType   = "tree"
-unparseObjectType CommitType = "commit"
-
-hashObject :: Object obj => obj -> Hash
-hashObject = B16.encode . SHA1.hash . objectFileContent
-
-compress :: B.ByteString -> B.ByteString
-compress = L.toStrict . Zlib.compress . L.fromStrict
-
-decompress :: B.ByteString -> B.ByteString
-decompress = L.toStrict . Zlib.decompress . L.fromStrict
-
-storeObject :: Object obj => obj -> IO ()
-storeObject obj = do
-  Dir.createDirectoryIfMissing True completeDir
-  -- TODO: packfile
-  exists <- looseObjectExists hashStr
-
-  if exists
-    then return ()
-    else B.writeFile path compressed
-
-  where hashStr      = B.unpack $ hashObject obj
-        dir          = take 2 $ hashStr
-        filename     = drop 2 $ hashStr
-        completeDir  = concat [".git/objects/", dir, "/"]
-        path         = completeDir ++ filename
-        uncompressed = objectFileContent obj
-        compressed   = compress uncompressed
-
-loadLooseRawObject :: Hash -> IO B.ByteString
-loadLooseRawObject hash = B.readFile (hashPath hash) >>= return . decompress
-
-loadPackedRawObject :: Hash -> IO (Maybe B.ByteString)
-loadPackedRawObject hash = do
-  obj <- searchInPackFiles hash
-  return $ do
-    (objType, content) <- obj
-
-    typeStr <- case objType of
-                    PackBlob   -> Just . B.pack $ "blob"
-                    PackTree   -> Just . B.pack $ "tree"
-                    PackCommit -> Just . B.pack $ "commit"
-                    _          -> Nothing
-
-    let decompressed = decompress content
-        size = B.length decompressed
-
-    return . B.concat $ [ typeStr
-                        , B.pack " "
-                        , B.pack . show $ size
-                        , B.pack "\0"
-                        , decompressed
-                        ]
-
-loadRawObject :: Hash -> IO B.ByteString
-loadRawObject hash = do
-  exists <- looseObjectExists . B.unpack $ hash
-  if exists
-    then loadLooseRawObject $ hash
-    else do
-      packed <- loadPackedRawObject hash
-
-      case packed of
-        Just b -> return b
-        Nothing -> fail "object not found"
-
+-- | Loads a Git object from disk.
 loadObject :: Object o => Hash -> IO o
 loadObject hash = raw >>= objectParse
   where raw      = loadRawObject hash
 
-objectFileContent :: Object obj => obj -> B.ByteString
-objectFileContent obj = uncompressed
-  where content      = objectRawContent obj
-        size         = B.pack $ show $ B.length content
-        objType      = objectType obj
-        uncompressed = B.concat [ B.pack . unparseObjectType $ objType
-                                , B.pack " "
-                                , size
-                                , B.pack "\0", content]
-
-rawObjectType :: B.ByteString -> Maybe ObjectType
-rawObjectType = parseObjectType . B.unpack . (B.takeWhile (/= ' '))
-
-hashPath :: Hash -> FilePath
-hashPath hash = path
-  where hashStr  = B.unpack hash
-        dir      = take 2 $ hashStr
-        filename = drop 2 $ hashStr
-        path     = concat [".git/objects/", dir, "/", filename]
-
-looseObjectExists :: String -> IO Bool
-looseObjectExists hashStr = do
-  let path = ".git/objects/" ++ take 2 hashStr ++ "/" ++ drop 2 hashStr
-  Dir.doesFileExist path
-
--- Blob
-
-instance Object Blob where
-  objectParse bs = case objType of
-    Just BlobType -> return . Blob $ content
-    _             -> fail "Not a blob"
-    where objType = rawObjectType bs
-          content = (B.split '\0' bs) !! 1
-
-  objectType _ = BlobType
-
-  objectRawContent (Blob content) = content
-
-  objectPretty (Blob bs) = B.unpack bs
-
--- Commit
-
-gitTimeFormat :: String
-gitTimeFormat = "%s %z"
-
-instance Object Commit where
-  objectType _ = CommitType
-
-  objectParse raw =
-    case objType of
-      Just CommitType -> return commit
-      _           -> fail "Not a commit"
-
-    where objType      = rawObjectType raw
-          content      = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
-          linesB       = B.split '\n' content
-          headerLines  = takeWhile (/= B.empty) linesB
-          treeLine     = headerLines !! 0
-          parentsLines = (takeWhile $ B.isPrefixOf $ B.pack "parent") .
-                         (drop 1) $
-                         headerLines
-          authorLine   = headerLines !! (length parentsLines + 1)
-
-          tree       = B.drop (length "tree ") treeLine
-          parents'   = [ B.drop (length "parent ") line
-                       | line <- parentsLines
-                       ]
-          author'    = B.unpack .
-                       B.init .
-                       B.takeWhile (/= '<') .
-                       B.drop (length "author ") $
-                       authorLine
-          email'     = B.unpack .
-                       B.takeWhile (/= '>') .
-                       B.drop 1 .
-                       B.dropWhile (/= '<') $
-                       authorLine
-          timestampM :: Maybe ZonedTime
-          timestampM = parseTimeM True defaultTimeLocale gitTimeFormat .
-                       B.unpack .
-                       B.drop 2 .
-                       B.dropWhile (/= '>') $
-                       authorLine
-          timestamp' = fromJust timestampM
-          message'   = B.unpack $
-                       B.drop (1 + length headerLines + (sum $ map B.length headerLines)) $
-                       content
-          commit = Commit tree parents' author' email' timestamp' message'
-
-  objectRawContent commit =
-    B.pack . intercalate "\n" $
-    [tree'] ++  parents' ++ [author', commiter', "", message commit]
-    where tree'      = "tree" ++ " " ++ B.unpack (treeHash commit)
-          parents'   = ["parent" ++ " " ++ B.unpack parent | parent <- parents commit]
-          author'    = "author" ++ " " ++ author commit ++ " " ++ "<" ++ email commit ++ ">" ++ " " ++ timestamp'
-          commiter'  = "commiter" ++ " " ++ author commit ++ " " ++ "<" ++ email commit ++ ">" ++ " " ++ timestamp'
-          timestamp' = formatTime defaultTimeLocale gitTimeFormat (timestamp commit)
-
-  objectPretty = B.unpack . objectRawContent
-
-
 -- Tree
-
-instance Object Tree where
-  objectType _ = TreeType
-
-  objectParse raw = case objType of
-    Just TreeType -> case parseTree raw of
-                       (Just tree) -> return tree
-                       Nothing     -> fail "Not a tree"
-    _             -> fail "Invalid tree"
-    where objType = rawObjectType raw
-
-  objectRawContent (Tree children) = B.concat $
-    [[ B.pack . stringFromFileMode $ mode, B.pack " "
-     , B.pack name, B.pack "\0"
-     , hash
-     ]
-    | (mode, name, hash) <- children
-    ] >>= return . B.concat
-
-  objectPretty (Tree entries) = intercalate "\n" $
-    [ let objType = case filemode of DirMode -> "tree"
-                                     StdMode -> "blob"
-      in stringFromFileMode filemode
-      ++ " "
-      ++ objType
-      ++ " "
-      ++ B.unpack hash
-      ++ "    "
-      ++ name
-    | (filemode, name, hash) <- entries
-    ]
 
 insertToInnerTree :: InnerTreeNode
                   -> (Hash, [FilePath], FilePath)
@@ -301,27 +100,6 @@ treesFromInnerTrees (InnerTree _ nodes) = (Tree content) : descendentTrees
 
         content = blobEntries ++ treeEntries
 treesFromInnerTrees _ = []
-
-parseTree :: B.ByteString -> Maybe Tree
-parseTree raw = do
-  let content = (B.drop 1) . (B.dropWhile (/= '\0')) $ raw
-  let getEntries bs
-        | bs == B.empty = Just []
-        | otherwise     = do
-            let (mode', rest')  = B.break (== ' ') bs
-            let (name', rest'') = B.span (/= '\0') $ B.drop 1 rest'
-            let (hash', rest)   = B.splitAt 20 $ B.drop 1 rest''
-
-            let name = B.unpack name'
-            let hash = B16.encode hash'
-
-            mode <- fileModeFromString . B.unpack $ mode'
-            restEntries <- getEntries rest
-
-            return $ (mode, name, hash):restEntries
-
-  entries <- getEntries content
-  return . Tree $ entries
 
 treeContentsRecursive :: IO Tree -> IO [(FileMode, FilePath, Hash)]
 treeContentsRecursive = (>>= \(Tree entries) -> treeContentsRecursive' [] entries)
