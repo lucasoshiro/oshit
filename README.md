@@ -1,5 +1,11 @@
 # Oshit
 
+<p align="center">
+<img src="https://raw.githubusercontent.com/lucasoshiro/oshit/logo/logo.svg" width="200px"></img>
+</p>
+
+
+
 Oshiro's git: VCS written in Haskell that tries to be compatible with git.
 
 This is **not safe to use**, and if you use it in serious repositories you
