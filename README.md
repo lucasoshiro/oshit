@@ -1,7 +1,7 @@
 # Oshit
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/lucasoshiro/oshit/logo/logo.svg" width="200px"></img>
+<img src="https://raw.githubusercontent.com/lucasoshiro/oshit/master/docs/svg/logo.svg" width="200px"></img>
 </p>
 
 
