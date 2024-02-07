@@ -12,6 +12,8 @@ This is **not safe to use**, and if you use it in serious repositories you
 probably will say: "Oshit!". This is only meant for learning how git works and
 how hard it is.
 
+<img src="https://raw.githubusercontent.com/lucasoshiro/oshit/master/docs/svg/oshit.svg">
+
 ## Building from source
 
 This project can be built from source using GNU Make, Stack, or Cabal. When
